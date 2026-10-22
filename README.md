@@ -15,6 +15,20 @@
 
 В Releases — только бинарь `apkg`. У curl на колонке нужен **`-k`** (нет CA).
 
+### Важно: buildroot = часто read-only
+
+На **не-Android** (gen2+ / buildroot) rootfs часто смонтирован **только для чтения**. Перед установкой `apkg` и пакетов сделай rw:
+
+```sh
+mount -o remount,rw /
+# при необходимости:
+mount -o remount,rw /usr
+mount -o remount,rw /usr/local
+mount -o remount,rw /opt
+```
+
+`install.sh` и `install-adb.sh` на buildroot пытаются сделать remount сами; если всё равно `Read-only file system` — выполни команды выше вручную (под root).
+
 ---
 
 ## Установка скриптом
@@ -29,7 +43,7 @@ cd yandex-station-repo
 ./scripts/install-adb.sh -s SERIAL
 ```
 
-Скрипт сам качает `apkg`, делает `adb push`, ставит в `/data/local/bin` (Android) или `/usr/local/bin` (buildroot) и запускает `apkg update`.
+Скрипт качает `apkg`, делает `adb push`, на buildroot — remount rw, ставит в `/data/local/bin` (Android) или `/usr/local/bin` (buildroot), затем `apkg update`.
 
 ### SSH (с компа)
 
@@ -38,18 +52,22 @@ cd yandex-station-repo
 ./scripts/install-ssh.sh -p 2222 root@host
 ```
 
-На удалённой стороне выполняется `install.sh` (определяет Android / buildroot).
+На удалённой стороне — `install.sh` (Android / buildroot + remount rw).
 
-### SSH одной строкой (на станции или через ssh)
+### SSH одной строкой
 
 ```sh
 curl -kfsSL https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
 ```
 
-Или:
-
 ```sh
 ssh root@IP 'curl -kfsSL https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh'
+```
+
+На buildroot, если скрипт упёрся в read-only:
+
+```sh
+ssh root@IP 'mount -o remount,rw /; curl -kfsSL https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh'
 ```
 
 ---
@@ -67,7 +85,7 @@ ssh root@IP 'curl -kfsSL https://raw.githubusercontent.com/initialfox/yandex-sta
 
 Переменные: `APKG_BINDIR` `APKG_OPT` `APKG_CACHE` `APKG_STATE` `APKG_INDEX` `APKG_BASE`
 
-Musl-пакеты: `opt/<имя>` + symlink в bindir. Обёртки `#!/bin/sh` + `DIR=$(dirname "$0")`.
+Musl-пакеты: `opt/<имя>` + обёртка в bindir с абсолютным `DIR`.
 
 ## Обновить ветку пакетов
 

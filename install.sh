@@ -10,6 +10,17 @@ is_android() {
   [ -e /system/bin/linker64 ] || [ -e /system/bin/linker ]
 }
 
+# gen2+ часто rootfs read-only — без remount rw ничего не поставить
+remount_rw() {
+  echo "→ remount rw (buildroot rootfs часто read-only)"
+  mount -o remount,rw / 2>/dev/null || true
+  mount -o remount,rw /usr 2>/dev/null || true
+  mount -o remount,rw /usr/local 2>/dev/null || true
+  mount -o remount,rw /opt 2>/dev/null || true
+  # иногда отдельно /bkupgrade
+  mount -o remount,rw /bkupgrade 2>/dev/null || true
+}
+
 pick_curl() {
   for c in curl /data/local/bin/curl /usr/local/bin/curl /usr/bin/curl /bin/curl; do
     if command -v "$c" >/dev/null 2>&1 || [ -x "$c" ]; then
@@ -35,10 +46,12 @@ if is_android; then
   TMP="${APKG_TMP:-/data/local/tmp}"
   echo "→ Android · bindir $BINDIR"
 else
+  remount_rw
   BINDIR="${APKG_BINDIR:-/usr/local/bin}"
   TMP="${APKG_TMP:-/tmp}"
   if ! mkdir -p "$BINDIR" 2>/dev/null; then
     BINDIR="${APKG_BINDIR:-/opt/bin}"
+    mkdir -p "$BINDIR" 2>/dev/null || true
   fi
   echo "→ buildroot · bindir $BINDIR"
 fi
@@ -55,3 +68,4 @@ echo "✓ apkg → $BINDIR/apkg"
 "$BINDIR/apkg" update
 echo
 echo "Дальше: apkg list · apkg install nano curl"
+echo "На buildroot перед установкой пакетов при read-only: mount -o remount,rw /"

@@ -49,6 +49,12 @@ else
 fi
 
 echo "→ flavor $FLAVOR · push → $DEVTMP/apkg → $BINDIR/apkg"
+
+if [ "$FLAVOR" = buildroot ]; then
+  echo "→ remount rw (rootfs часто read-only)"
+  adb_cmd shell 'mount -o remount,rw /; mount -o remount,rw /usr; mount -o remount,rw /usr/local; mount -o remount,rw /opt; mount -o remount,rw /bkupgrade' 2>/dev/null || true
+fi
+
 adb_cmd shell "mkdir -p $DEVTMP $BINDIR" 2>/dev/null || true
 adb_cmd push "$TMP" "$DEVTMP/apkg"
 
@@ -62,3 +68,4 @@ fi
 
 echo
 echo "✓ готово. На станции: export PATH=$BINDIR:\$PATH && apkg install nano"
+echo "  buildroot + read-only: mount -o remount,rw /   перед install"
