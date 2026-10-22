@@ -1,0 +1,7 @@
+version=10.1.0
+category=util
+kind=dir
+dest=/data/local/opt/fd
+check=/data/local/opt/fd/bin/fd
+description=Простой find
+bin=fd
