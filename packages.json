@@ -173,6 +173,20 @@
       "size": 1941504
     },
     {
+      "name": "lsof",
+      "version": "4.99.3",
+      "arch": "aarch64",
+      "description": "Открытые файлы/сокеты",
+      "category": "debug",
+      "kind": "dir",
+      "asset": "lsof.tar",
+      "bin": "lsof",
+      "dest": "/data/local/opt/lsof",
+      "check": "/data/local/opt/lsof/bin/lsof",
+      "md5": "dfb4b22d98381c5f6ac6e9025af294a8",
+      "size": 1005056
+    },
+    {
       "name": "miniserve",
       "version": "0.29.0",
       "arch": "aarch64",
