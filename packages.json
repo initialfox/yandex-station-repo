@@ -243,6 +243,20 @@
       "size": 1076736
     },
     {
+      "name": "findutils",
+      "version": "4.9.0",
+      "arch": "aarch64",
+      "description": "GNU find/xargs",
+      "category": "util",
+      "kind": "dir",
+      "asset": "findutils.tar",
+      "bin": "find",
+      "dest": "/data/local/opt/findutils",
+      "check": "/data/local/opt/findutils/bin/find",
+      "md5": "66868ce90dcd8424bf609daa8e92eb83",
+      "size": 1004544
+    },
+    {
       "name": "fzf",
       "version": "0.54.0",
       "arch": "aarch64",
