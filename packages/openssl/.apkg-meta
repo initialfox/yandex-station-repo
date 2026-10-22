@@ -1,0 +1,7 @@
+version=3.3.2
+category=net
+kind=dir
+dest=/data/local/opt/openssl
+check=/data/local/opt/openssl/bin/openssl
+description=OpenSSL CLI
+bin=openssl
