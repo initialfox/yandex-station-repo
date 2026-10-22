@@ -1,0 +1,7 @@
+version=14.1.0
+category=util
+kind=dir
+dest=/data/local/opt/ripgrep
+check=/data/local/opt/ripgrep/bin/rg
+description=Быстрый поиск по коду
+bin=rg
