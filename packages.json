@@ -327,6 +327,20 @@
       "size": 824832
     },
     {
+      "name": "zip",
+      "version": "3.0",
+      "arch": "aarch64",
+      "description": "Упаковка ZIP",
+      "category": "util",
+      "kind": "dir",
+      "asset": "zip.tar",
+      "bin": "zip",
+      "dest": "/data/local/opt/zip",
+      "check": "/data/local/opt/zip/bin/zip",
+      "md5": "26a4a1986d51c63fc59c4bf0ddc15449",
+      "size": 1351680
+    },
+    {
       "name": "zsh",
       "version": "5.9.2",
       "arch": "aarch64",
