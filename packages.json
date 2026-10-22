@@ -6,6 +6,20 @@
   "index_url": "https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json",
   "packages": [
     {
+      "name": "age",
+      "version": "1.2.1",
+      "arch": "aarch64",
+      "description": "Шифрование age",
+      "category": "sec",
+      "kind": "dir",
+      "asset": "age.tar",
+      "bin": "age",
+      "dest": "/data/local/opt/age",
+      "check": "/data/local/opt/age/bin/age",
+      "md5": "990de5cd92e288b33e9ba637b6b07aa2",
+      "size": 4478976
+    },
+    {
       "name": "apkg",
       "version": "1.0.1",
       "arch": "aarch64",
