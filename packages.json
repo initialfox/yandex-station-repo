@@ -117,6 +117,20 @@
       "size": 806400
     },
     {
+      "name": "delta",
+      "version": "0.17.0",
+      "arch": "aarch64",
+      "description": "git diff с подсветкой",
+      "category": "dev",
+      "kind": "dir",
+      "asset": "delta.tar",
+      "bin": "delta",
+      "dest": "/data/local/opt/delta",
+      "check": "/data/local/opt/delta/bin/delta",
+      "md5": "047535124fdec8a603c8a8f35f5614cd",
+      "size": 15895552
+    },
+    {
       "name": "dig",
       "version": "9.18.27",
       "arch": "aarch64",
