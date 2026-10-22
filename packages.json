@@ -229,6 +229,20 @@
       "size": 24788992
     },
     {
+      "name": "gnupg",
+      "version": "2.4.5",
+      "arch": "aarch64",
+      "description": "GnuPG",
+      "category": "sec",
+      "kind": "dir",
+      "asset": "gnupg.tar",
+      "bin": "gpg",
+      "dest": "/data/local/opt/gnupg",
+      "check": "/data/local/opt/gnupg/bin/gpg",
+      "md5": "8cb6263b68040a1bbf94c009d1cc2544",
+      "size": 30748672
+    },
+    {
       "name": "htop",
       "version": "3.3.0",
       "arch": "aarch64",
