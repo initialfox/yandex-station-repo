@@ -1,0 +1,8 @@
+#!/bin/sh
+DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+# neofetch — bash-скрипт
+if command -v bash >/dev/null 2>&1; then
+  exec bash "$DIR/bin/neofetch" "$@"
+fi
+# на станции часто только sh — попробуем всё равно
+exec sh "$DIR/bin/neofetch" "$@"

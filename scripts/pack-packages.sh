@@ -18,6 +18,7 @@ dist.mkdir(exist_ok=True)
 
 # meta hints from existing fields / defaults
 META = {
+  "neofetch": ("7.1.0", "system", "dir", "/data/local/opt/neofetch", "/data/local/opt/neofetch/bin/neofetch", "Системная информация (bash)"),
   "zsh": ("5.9.2", "shell", "dir", "/data/local/opt/zsh", "/data/local/opt/zsh/zsh", "Z shell (static musl)"),
   "fastfetch": ("2.70.0", "system", "dir", "/data/local/opt/fastfetch", "/data/local/opt/fastfetch/fastfetch", "Системная информация"),
   "dropbear": ("2022.82", "net", "dir", "/data/dropbear", "/data/dropbear/dropbear", "SSH server"),

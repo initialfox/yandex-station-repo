@@ -2,82 +2,108 @@
 [SIZE=2]Android + buildroot · aarch64 · [URL=https://github.com/initialfox/yandex-station-repo]GitHub[/URL][/SIZE]
 
 [QUOTE]Нужен [B]root[/B] (SSH или ADB).
-Работает на двух вариантах ОС колонки:
+
+Две версии ОС на колонках:
 [LIST]
-[*] [B]Android[/B] — пути /data/local/bin, /data/local/opt
-[*] [B]buildroot[/B] — /usr/local/bin или /opt (часто rootfs read-only → remount rw)
+[*] [B]Android[/B] — /data/local/bin, /data/local/opt
+[*] [B]buildroot[/B] — /usr/local/bin или /opt (часто rootfs [B]read-only[/B] → сначала remount rw)
 [/LIST]
 [/QUOTE]
 
-Один бинарь [B]apkg[/B]. Пакеты качаются с GitHub (ветка [B]pkg[/B]), не нужно тащить всё вручную.
+Один бинарь [B]apkg[/B]. Пакеты качает сам с GitHub (ветка [B]pkg[/B]).
 
 [B]Репозиторий:[/B] [URL=https://github.com/initialfox/yandex-station-repo]github.com/initialfox/yandex-station-repo[/URL]
-[B]README:[/B] [URL=https://github.com/initialfox/yandex-station-repo/blob/main/README.md]инструкция[/URL]
+[B]Полная инструкция:[/B] [URL=https://github.com/initialfox/yandex-station-repo/blob/main/README.md]README.md[/URL]
+[B]Каталог пакетов:[/B] [URL=https://github.com/initialfox/yandex-station-repo/blob/main/packages.json]packages.json[/URL]
 
 [HR]
 
-[SPOILER=Быстрая установка (ADB с компа)]
+[SPOILER=Установка через ADB (с компа)]
 [CODE]
 git clone https://github.com/initialfox/yandex-station-repo.git
 cd yandex-station-repo
 ./scripts/install-adb.sh
-# или конкретное устройство:
+# конкретное устройство:
 ./scripts/install-adb.sh -s IP:5555
 [/CODE]
-Скрипт сам определит Android / buildroot, на buildroot сделает remount rw.
+Скрипт качает apkg, делает [B]adb push[/B], сам определяет Android / buildroot.
+На buildroot пробует [B]mount -o remount,rw /[/B].
 [/SPOILER]
 
 [SPOILER=Установка по SSH / на станции]
-Если DNS на колонке нормальный:
+Если DNS живой:
 
 [CODE]
 curl -kfsSL https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
 [/CODE]
 
-Часто DNS битый ([B]Could not resolve host[/B]) — тогда:
+Часто на колонке DNS мёртвый ([B]Could not resolve host[/B], resolv → ::1:53). Тогда:
 
 [CODE]
 curl -kfsSL --resolve raw.githubusercontent.com:443:185.199.108.133 \
   https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
 [/CODE]
 
-На [B]buildroot[/B] перед этим, если read-only:
+На [B]buildroot[/B], если Read-only file system:
 
 [CODE]
 mount -o remount,rw /
 [/CODE]
 
-[B]-k[/B] у curl обязателен: на колонке часто нет CA.
+Флаг [B]-k[/B] у curl обязателен (нет CA на станции).
 [/SPOILER]
 
 [SPOILER=Команды]
 [CODE]
-apkg paths              # flavor: android или buildroot
+export PATH=/data/local/bin:/usr/local/bin:$PATH   # что актуально
+
+apkg version
+apkg paths                 # flavor android | buildroot
 apkg update
 apkg list
 apkg search vpn
-apkg install nano curl btop openvpn
+apkg install nano curl btop
+apkg install zsh fastfetch neofetch
+apkg install openvpn
 apkg remove nano
 apkg upgrade
 [/CODE]
 
-После установки бинари в PATH (Android: /data/local/bin, buildroot: /usr/local/bin).
-Musl-пакеты запускай через имя из PATH (обёртка), не голый ELF из opt/.../bin/.
+Musl-пакеты запускай по имени из PATH (обёртка), не голый файл из opt/.../bin/.
 [/SPOILER]
 
-[SPOILER=Что уже есть в репе]
-Смотри актуальный список: [URL=https://github.com/initialfox/yandex-station-repo/blob/main/packages.json]packages.json[/URL]
+[SPOILER=Пакеты в репе]
+Актуальный список всегда в [URL=https://github.com/initialfox/yandex-station-repo/blob/main/packages.json]packages.json[/URL].
 
-Примеры: nano, curl, btop, dropbear, ffmpeg, nmap, openvpn, wireguard, sqlite, darkhttpd, zsh, …
+Сейчас, среди прочего:
+[LIST]
+[*] shell: zsh
+[*] system: btop, fastfetch, neofetch, apkg
+[*] net: curl, dropbear, darkhttpd, miniserve, iperf3, tcpdump, nmap
+[*] vpn: openvpn, wireguard
+[*] editors: nano
+[*] media: ffmpeg
+[*] db: sqlite
+[/LIST]
 [/SPOILER]
 
-[SPOILER=Хочу добавить свой пакет]
-Кратко: aarch64, musl-бандл или static, обёртка #!/bin/sh, структура packages/<имя>/.
-Подробно: [URL=https://github.com/initialfox/yandex-station-repo/blob/main/README.md]README → «Как добавить пакет»[/URL]
+[SPOILER=Важно / частые грабли]
+[LIST]
+[*] [B]buildroot + read-only[/B] — без [CODE]mount -o remount,rw /[/CODE] ничего не поставится
+[*] [B]DNS[/B] — если curl не резолвит GitHub, используй --resolve (см. выше) или ставь через ADB push
+[*] Обновляй apkg: [CODE]apkg version[/CODE] (актуально 1.0.7+)
+[*] После обновления индекса: [CODE]apkg update[/CODE]
+[*] neofetch — bash-скрипт, нужен [B]bash[/B] в PATH (или ставь fastfetch — нативный бинарь)
+[/LIST]
+[/SPOILER]
 
-[B]Прислать в репу:[/B] пиши в Telegram в личку [B][URL=https://t.me/initialfox]@initialfox[/URL][/B]
+[SPOILER=Хочу добавить свой пакет в репу]
+Как собрать самому: [URL=https://github.com/initialfox/yandex-station-repo/blob/main/README.md]README → «Как добавить пакет»[/URL]
+(aarch64, musl/static, обёртка #!/bin/sh, pack + ветка pkg).
+
+[B]Прислать готовое:[/B] в Telegram в личку [B][URL=https://t.me/initialfox]@initialfox[/URL][/B]
 — архив / ссылка + что за утилита. Могу спокойно залить бинарники в репозиторий.
 [/SPOILER]
 
 [HR]
-[SIZE=2]Вопросы / пакеты / баги — [URL=https://t.me/initialfox]@initialfox[/URL] (ЛС) или Issues на GitHub.[/SIZE]
+[SIZE=2]Вопросы / пакеты / баги — ЛС [URL=https://t.me/initialfox]@initialfox[/URL] · Issues на GitHub.[/SIZE]

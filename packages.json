@@ -7,16 +7,16 @@
   "packages": [
     {
       "name": "apkg",
-      "version": "1.0.7",
+      "version": "1.0.0",
       "arch": "aarch64",
       "description": "Пакетный менеджер Alice",
       "category": "system",
       "kind": "file",
-      "asset": "apkg",
+      "asset": "apkg.tar",
       "bin": "apkg",
       "check": "/data/local/bin/apkg",
-      "md5": "666f119b83948765c4e6cf2fe945435f",
-      "size": 6291616
+      "md5": "32f5227e0d016e7353751e29d588cd1e",
+      "size": 6296064
     },
     {
       "name": "btop",
@@ -83,10 +83,10 @@
       "kind": "dir",
       "asset": "fastfetch.tar",
       "bin": "fastfetch",
+      "dest": "/data/local/opt/fastfetch",
       "check": "/data/local/opt/fastfetch/fastfetch",
       "md5": "43aa680d45216b23872d23c45e570ac7",
-      "size": 1826816,
-      "dest": "/data/local/opt/fastfetch"
+      "size": 1826816
     },
     {
       "name": "ffmpeg",
@@ -97,10 +97,10 @@
       "kind": "dir",
       "asset": "ffmpeg.tar",
       "bin": "ffmpeg",
+      "dest": "/data/local/opt/ffmpeg",
       "check": "/data/local/opt/ffmpeg/ffmpeg",
       "md5": "af66a18a02013932c7d78c7d6b2a264f",
-      "size": 51138560,
-      "dest": "/data/local/opt/ffmpeg"
+      "size": 51138560
     },
     {
       "name": "iperf3",
@@ -125,10 +125,10 @@
       "kind": "dir",
       "asset": "miniserve.tar",
       "bin": "miniserve",
+      "dest": "/data/local/opt/miniserve",
       "check": "/data/local/opt/miniserve/miniserve",
       "md5": "cf0464cec8a0991b4bf48dc3e33b4639",
-      "size": 2060800,
-      "dest": "/data/local/opt/miniserve"
+      "size": 2060800
     },
     {
       "name": "nano",
@@ -143,6 +143,20 @@
       "check": "/data/local/opt/nano/bin/nano",
       "md5": "9abe49bf6bae68a83360b28a897fce75",
       "size": 4205568
+    },
+    {
+      "name": "neofetch",
+      "version": "7.1.0",
+      "arch": "aarch64",
+      "description": "Системная информация (bash)",
+      "category": "system",
+      "kind": "dir",
+      "asset": "neofetch.tar",
+      "bin": "neofetch",
+      "dest": "/data/local/opt/neofetch",
+      "check": "/data/local/opt/neofetch/bin/neofetch",
+      "md5": "eaae7ef1e0c99d6b3436d7afca8a625a",
+      "size": 273920
     },
     {
       "name": "nmap",
@@ -223,10 +237,10 @@
       "kind": "dir",
       "asset": "zsh.tar",
       "bin": "zsh",
+      "dest": "/data/local/opt/zsh",
       "check": "/data/local/opt/zsh/zsh",
       "md5": "68588b1ad057186004ca4ddc5a31b722",
-      "size": 1707520,
-      "dest": "/data/local/opt/zsh"
+      "size": 1707520
     }
   ]
 }
