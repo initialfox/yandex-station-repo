@@ -323,7 +323,7 @@
       "bin": "rsync",
       "dest": "/data/local/opt/rsync",
       "check": "/data/local/opt/rsync/bin/rsync",
-      "md5": "4143b26f1eb48769abad8fc9a33391f9",
+      "md5": "89677427582541a605b4bfb55e60c8b3",
       "size": 3487232
     },
     {
