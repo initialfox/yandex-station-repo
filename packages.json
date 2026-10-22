@@ -148,15 +148,15 @@
       "name": "neofetch",
       "version": "7.1.0",
       "arch": "aarch64",
-      "description": "Системная информация (bash)",
+      "description": "Системная информация (+ musl bash)",
       "category": "system",
       "kind": "dir",
       "asset": "neofetch.tar",
       "bin": "neofetch",
       "dest": "/data/local/opt/neofetch",
       "check": "/data/local/opt/neofetch/bin/neofetch",
-      "md5": "eaae7ef1e0c99d6b3436d7afca8a625a",
-      "size": 273920
+      "md5": "6215c4919f035bf8e1e0df85b7b4822d",
+      "size": 2702336
     },
     {
       "name": "nmap",
