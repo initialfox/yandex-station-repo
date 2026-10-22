@@ -1,0 +1,7 @@
+version=4.0.4
+category=sys
+kind=dir
+dest=/data/local/opt/procps
+check=/data/local/opt/procps/bin/ps
+description=ps/top/free/kill
+bin=ps
