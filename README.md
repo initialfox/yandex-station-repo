@@ -97,7 +97,75 @@ ssh root@IP 'mount -o remount,rw /; curl -kfsSL --resolve raw.githubusercontent.
 
 Musl-пакеты: `opt/<имя>` + обёртка в bindir с абсолютным `DIR`.
 
-## Обновить ветку пакетов
+---
+
+## Как добавить пакет
+
+Цель: **aarch64**, желательно **musl** (Alpine) или static. Один пакет должен работать и на **Android**, и на **buildroot**.
+
+### 1. Структура каталога
+
+```
+packages/<имя>/
+  bin/<бинарь>          # или просто <бинарь> в корне пакета
+  lib/                  # musl: ld-musl-aarch64.so.1 + все .so
+                        # + SONAME-symlink'и (libfoo.so.1 → libfoo.so.1.2.3)
+  <имя>-run             # обёртка #!/bin/sh
+```
+
+Пример обёртки (`packages/nano/nano-run`):
+
+```sh
+#!/bin/sh
+DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+export LD_LIBRARY_PATH="$DIR/lib:${LD_LIBRARY_PATH:-}"
+exec "$DIR/lib/ld-musl-aarch64.so.1" "$DIR/bin/nano" "$@"
+```
+
+Для static-бинаря достаточно одного файла в `packages/<имя>/<имя>` (`kind: file`).
+
+### 2. META в pack-скрипте
+
+В `scripts/pack-packages.sh` добавь строку в `META`:
+
+```python
+"mytool": ("1.2.3", "net", "dir", "/data/local/opt/mytool", "/data/local/opt/mytool/bin/mytool", "Описание"),
+# name: (version, category, kind, dest, check, description)
+# kind: "dir" (бандл) | "file" (один бинарь)
+```
+
+`dest`/`check` пиши под Android-пути — на buildroot `apkg` сам ремапит в `opt`/`bindir`.
+
+### 3. Собрать и залить
+
+```sh
+./scripts/pack-packages.sh          # → dist/*.tar + packages.json
+./scripts/push-pkg-branch.sh        # ветка pkg (raw) — откуда качает станция
+git add packages packages.json scripts/pack-packages.sh
+git commit -m "add mytool" && git push origin main
+```
+
+Проверка на колонке: `apkg update && apkg install mytool && mytool --version`.
+
+### Чеклист
+
+- [ ] aarch64, не x86
+- [ ] musl-бандл: в `lib/` есть `ld-musl-aarch64.so.1` и все зависимости
+- [ ] SONAME-symlink'и на месте (`liblzo2.so.2` → `liblzo2.so.2.0.0`, …)
+- [ ] есть `<имя>-run` с `#!/bin/sh` (не bash)
+- [ ] не хардкодить `/data/local` внутри обёртки — только `DIR=...`
+- [ ] прогнать на Android и/или buildroot
+
+Готовый Alpine-бандл можно собрать так: `./scripts/build-alpine-bundle.sh <apk-пакет>`.
+
+---
+
+## Хочешь добавить пакет в репу?
+
+Напиши в Telegram в личку: **[@initialfox](https://t.me/initialfox)**  
+(архив/`tar`/ссылка + коротко что за утилита и aarch64 ли бинарь).
+
+## Обновить ветку пакетов (мейнтейнер)
 
 ```sh
 ./scripts/pack-packages.sh
