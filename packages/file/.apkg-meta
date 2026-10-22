@@ -1,0 +1,7 @@
+version=5.45
+category=util
+kind=dir
+dest=/data/local/opt/file
+check=/data/local/opt/file/bin/file
+description=Определение типа файла
+bin=file

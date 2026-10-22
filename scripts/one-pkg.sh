@@ -49,13 +49,13 @@ OUT=$(ssh_st "/system/bin/sh -c '
   \$RUN --version >\$OV 2>&1 || true
   if grep -qiE \"Error loading shared library|cannot open shared object\" \$OV; then
     ok=0
-  elif grep -qiE \"[0-9]+\\.[0-9]+|usage|Usage|option|Syntax|socat\" \$OV; then
+  elif grep -qiE \"[0-9]+\\.[0-9]+|[0-9]{2,}|usage|Usage|option|Syntax|Copyright|comes with|socat\" \$OV; then
     ok=1
   else
     \$RUN -V >\$OV 2>&1 || \$RUN -h >\$OV 2>&1 || \$RUN >\$OV 2>&1 || true
     if grep -qiE \"Error loading shared library|cannot open shared object\" \$OV; then
       ok=0
-    elif grep -qiE \"[0-9]+\\.[0-9]+|usage|Usage|option|Syntax\" \$OV; then
+    elif grep -qiE \"[0-9]+\\.[0-9]+|[0-9]{2,}|usage|Usage|option|Syntax|Copyright|comes with\" \$OV; then
       ok=1
     fi
   fi
