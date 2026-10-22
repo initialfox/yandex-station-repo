@@ -369,6 +369,20 @@
       "size": 28178944
     },
     {
+      "name": "node",
+      "version": "20.15.0",
+      "arch": "aarch64",
+      "description": "Node.js",
+      "category": "lang",
+      "kind": "dir",
+      "asset": "node.tar",
+      "bin": "node",
+      "dest": "/data/local/opt/node",
+      "check": "/data/local/opt/node/bin/node",
+      "md5": "28225e20c82e78075012a62d7f94dd44",
+      "size": 67896832
+    },
+    {
       "name": "openssl",
       "version": "3.3.2",
       "arch": "aarch64",
@@ -423,6 +437,20 @@
       "check": "/data/local/opt/pv/bin/pv",
       "md5": "d924b8d7db4a60eadce2eef12c056bfb",
       "size": 876544
+    },
+    {
+      "name": "python3",
+      "version": "3.12.0",
+      "arch": "aarch64",
+      "description": "Python 3",
+      "category": "lang",
+      "kind": "dir",
+      "asset": "python3.tar",
+      "bin": "python3",
+      "dest": "/data/local/opt/python3",
+      "check": "/data/local/opt/python3/bin/python3",
+      "md5": "5447085c469e778c8f08edbf2e7906bf",
+      "size": 33533952
     },
     {
       "name": "ripgrep",
