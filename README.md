@@ -2,10 +2,14 @@
 
 Пакеты для Яндекс.Станций + менеджер **`apkg`** (один статический бинарь aarch64).
 
-- **Station 1 (Android):** `/data/local/bin`, `/data/local/opt`
-- **gen2+ (buildroot):** `/usr/local/bin` / `/opt` — без `/sdcard`
+Две платформы (один набор пакетов):
 
-Один набор пакетов на обе платформы. Пути: `apkg paths`.
+| Версия | ОС | Куда ставит |
+|--------|-----|-------------|
+| **Android** | bionic (`/system/bin/linker*`) | `/data/local/bin`, `/data/local/opt` |
+| **buildroot** | обычный Linux | `/usr/local/bin` / `/opt` (без `/sdcard`) |
+
+Смотри фактические пути: `apkg paths` → `flavor android` или `flavor buildroot`.
 
 | Что | URL |
 |-----|-----|
@@ -17,17 +21,13 @@
 
 ### Важно: buildroot = часто read-only
 
-На **не-Android** (gen2+ / buildroot) rootfs часто смонтирован **только для чтения**. Перед установкой `apkg` и пакетов сделай rw:
+На **buildroot** rootfs часто смонтирован **только для чтения**. Перед установкой `apkg` и пакетов:
 
 ```sh
 mount -o remount,rw /
-# при необходимости:
-mount -o remount,rw /usr
-mount -o remount,rw /usr/local
-mount -o remount,rw /opt
 ```
 
-`install.sh` и `install-adb.sh` на buildroot пытаются сделать remount сами; если всё равно `Read-only file system` — выполни команды выше вручную (под root).
+`install.sh` и `install-adb.sh` на buildroot делают remount сами; если всё равно `Read-only file system` — выполни вручную (root).
 
 ---
 
@@ -39,11 +39,10 @@ mount -o remount,rw /opt
 git clone https://github.com/initialfox/yandex-station-repo.git
 cd yandex-station-repo
 ./scripts/install-adb.sh
-# несколько устройств:
 ./scripts/install-adb.sh -s SERIAL
 ```
 
-Скрипт качает `apkg`, делает `adb push`, на buildroot — remount rw, ставит в `/data/local/bin` (Android) или `/usr/local/bin` (buildroot), затем `apkg update`.
+Скрипт качает `apkg`, делает `adb push`, на **buildroot** — remount rw, ставит в `/data/local/bin` (**Android**) или `/usr/local/bin` (**buildroot**), затем `apkg update`.
 
 ### SSH (с компа)
 
@@ -52,29 +51,30 @@ cd yandex-station-repo
 ./scripts/install-ssh.sh -p 2222 root@host
 ```
 
-На удалённой стороне — `install.sh` (Android / buildroot + remount rw).
+На станции — `install.sh` (определяет **Android** / **buildroot**).
 
 ### SSH / на станции одной строкой
 
-Если DNS на колонке живой:
+Если DNS живой:
 
 ```sh
 curl -kfsSL https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
 ```
 
-Если `Could not resolve host` (часто на Station 1, DNS → `::1:53`) — с `--resolve`:
+Если `Could not resolve host` (часто на **Android**, DNS → `::1:53`) — с `--resolve`:
 
 ```sh
-curl -kfsSL --resolve raw.githubusercontent.com:443:185.199.108.133   https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
+curl -kfsSL --resolve raw.githubusercontent.com:443:185.199.108.133 \
+  https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
 ```
 
-Или надёжнее с компа через ADB push: `./scripts/install-adb.sh`
+Надёжнее с компа: `./scripts/install-adb.sh`
 
 ```sh
 ssh root@IP 'curl -kfsSL --resolve raw.githubusercontent.com:443:185.199.108.133 https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh'
 ```
 
-Buildroot + read-only:
+**buildroot** + read-only:
 
 ```sh
 ssh root@IP 'mount -o remount,rw /; curl -kfsSL --resolve raw.githubusercontent.com:443:185.199.108.133 https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh'
@@ -86,7 +86,7 @@ ssh root@IP 'mount -o remount,rw /; curl -kfsSL --resolve raw.githubusercontent.
 
 | Команда | Зачем |
 |---------|--------|
-| `apkg paths` | куда ставит (android / buildroot) |
+| `apkg paths` | `flavor` = `android` или `buildroot` |
 | `apkg update` | обновить индекс |
 | `apkg list` / `apkg search vpn` | список / поиск |
 | `apkg install nano` | поставить |

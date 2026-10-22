@@ -34,7 +34,7 @@ var indexFallbacks = []string{
 	"https://github.com/initialfox/yandex-station-repo/raw/refs/heads/main/packages.json",
 }
 
-// paths — Station 1 (Android: /data/local, /sdcard) vs gen2+ (buildroot: /opt, /usr/local, /tmp).
+// paths — Android (/data/local) vs buildroot (/opt, /usr/local, /tmp).
 type paths struct {
 	Bindir string
 	Opt    string
@@ -66,7 +66,7 @@ func detectPaths() paths {
 		State:  os.Getenv("APKG_STATE"),
 	}
 
-	// Android = bionic linker. Не угадываем по /data/local (на gen2 тоже бывает).
+	// Android = bionic linker. Не угадываем по /data/local (на buildroot тоже бывает).
 	isAndroid := fileExists("/system/bin/linker64") || fileExists("/system/bin/linker")
 
 	if isAndroid {
@@ -90,7 +90,7 @@ func detectPaths() paths {
 			)
 		}
 	} else {
-		// gen2+ полноценный buildroot — без /sdcard и /system/bin/sh
+		// buildroot — без /sdcard и /system/bin/sh
 		p.Flavor = "buildroot"
 		if p.Bindir == "" {
 			p.Bindir = firstWritableDir("/usr/local/bin", "/opt/bin", "/usr/bin", "/bin")
@@ -185,7 +185,7 @@ type repoMeta struct {
 	Packages    []pkgMeta `json:"packages"`
 }
 
-// публичные DNS: на gen2/buildroot resolv.conf часто указывает на ::1:53 → connection refused
+// публичные DNS: на станциях resolv.conf часто указывает на ::1:53 → connection refused
 var publicDNS = []string{
 	"77.88.8.8:53", // Yandex
 	"8.8.8.8:53",
@@ -336,7 +336,7 @@ func printHelp() {
   cache  %s
 
 Musl-пакеты: целиком в opt/<имя> + symlink в bindir.
-Обёртки: #!/bin/sh и DIR=dirname (Android Station 1 и buildroot gen2+).
+Обёртки: #!/bin/sh, в PATH — с абсолютным DIR (Android и buildroot).
 Не запускай голый ELF из bin/ — будет «not found».
 
 Переменные: APKG_INDEX APKG_BASE APKG_BINDIR APKG_OPT APKG_CACHE APKG_STATE
@@ -680,7 +680,7 @@ func removeOne(p pkgMeta) error {
 }
 
 func installDest(p pkgMeta) string {
-	// dest из индекса часто заточен под Station 1 (/data/local/opt/…) —
+	// dest из индекса часто под Android (/data/local/opt/…) —
 	// на buildroot подменяем префикс на P.Opt
 	if p.Dest != "" {
 		return remapDest(p.Dest)
@@ -960,7 +960,7 @@ func fileMD5(path string) (string, error) {
 }
 
 func tryXbin(pkgDestOrBin, bin string) {
-	// только Android Station 1; на buildroot /system нет
+	// только Android; на buildroot /system нет
 	if P.Flavor != "android" {
 		return
 	}
@@ -1012,7 +1012,7 @@ func chmodTree(root string) {
 	})
 }
 
-// ensureMuslWrapper — в PATH только обёртка; #!/bin/sh + DIR=dirname (gen1 и gen2).
+// ensureMuslWrapper — обёртка в opt; #!/bin/sh + DIR=dirname (в PATH пишется bound).
 func ensureMuslWrapper(dest, bin string, p pkgMeta) string {
 	for _, name := range []string{bin + "-run", p.Name + "-run", bin + "-ssh", "run.sh"} {
 		cand := filepath.Join(dest, name)
