@@ -407,8 +407,8 @@
       "bin": "tmux",
       "dest": "/data/local/opt/tmux",
       "check": "/data/local/opt/tmux/bin/tmux",
-      "md5": "5fcd32ef7f7db31662d73f9da6f07ffa",
-      "size": 10058240
+      "md5": "9820244870dd823ef17d73c0da58117c",
+      "size": 9922560
     },
     {
       "name": "tree",
