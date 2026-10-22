@@ -155,7 +155,7 @@
       "bin": "htop",
       "dest": "/data/local/opt/htop",
       "check": "/data/local/opt/htop/bin/htop",
-      "md5": "47702549d06e327fe740addda53b033d",
+      "md5": "9ba3e6dfdf82e41b08ffaa4c7219013e",
       "size": 2058752
     },
     {
