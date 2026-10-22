@@ -285,6 +285,20 @@
       "size": 1005056
     },
     {
+      "name": "micro",
+      "version": "2.0.13",
+      "arch": "aarch64",
+      "description": "Простой терминальный редактор",
+      "category": "util",
+      "kind": "dir",
+      "asset": "micro.tar",
+      "bin": "micro",
+      "dest": "/data/local/opt/micro",
+      "check": "/data/local/opt/micro/bin/micro",
+      "md5": "772884adff4f569d08d27f4db9b839aa",
+      "size": 13481984
+    },
+    {
       "name": "miniserve",
       "version": "0.29.0",
       "arch": "aarch64",
