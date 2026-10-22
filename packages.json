@@ -369,6 +369,20 @@
       "size": 8159744
     },
     {
+      "name": "procps",
+      "version": "4.0.4",
+      "arch": "aarch64",
+      "description": "ps/top/free/kill",
+      "category": "sys",
+      "kind": "dir",
+      "asset": "procps.tar",
+      "bin": "ps",
+      "dest": "/data/local/opt/procps",
+      "check": "/data/local/opt/procps/bin/ps",
+      "md5": "fc4b3d38d66dd93a524b9d487e640975",
+      "size": 2761216
+    },
+    {
       "name": "pv",
       "version": "1.8.5",
       "arch": "aarch64",
