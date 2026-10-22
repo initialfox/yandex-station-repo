@@ -791,6 +791,20 @@
       "size": 824832
     },
     {
+      "name": "xh",
+      "version": "0.22.0",
+      "arch": "aarch64",
+      "description": "HTTP клиент (httpie-like)",
+      "category": "net",
+      "kind": "dir",
+      "asset": "xh.tar",
+      "bin": "xh",
+      "dest": "/data/local/opt/xh",
+      "check": "/data/local/opt/xh/bin/xh",
+      "md5": "50d971d97b0cd21989864abb07ad0e00",
+      "size": 10734592
+    },
+    {
       "name": "xz",
       "version": "5.6.2",
       "arch": "aarch64",
