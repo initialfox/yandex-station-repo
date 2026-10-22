@@ -1,0 +1,7 @@
+version=2.1.3
+category=util
+kind=dir
+dest=/data/local/opt/tree
+check=/data/local/opt/tree/bin/tree
+description=Дерево каталогов
+bin=tree

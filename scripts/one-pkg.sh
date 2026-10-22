@@ -106,32 +106,53 @@ print(name, "new" if is_new else "upd", h, size)
 PY
 IS_NEW=$(cat /tmp/apkg-is-new)
 
-# ветка pkg — shallow clone (Contents API на больших tar зависает)
-PKG_TMP=$(mktemp -d)
-git clone --depth 1 -b pkg "https://github.com/initialfox/yandex-station-repo.git" "$PKG_TMP"
-cp "dist/${NAME}.tar" "$PKG_TMP/"
-cp packages.json "$PKG_TMP/packages.json"
-(
-  cd "$PKG_TMP"
-  git config http.postBuffer 524288000
-  git add "${NAME}.tar" packages.json
-  git -c user.email="apkg@local" -c user.name="apkg" commit -m "apkg: ${NAME} ${VER}" || true
-  git push origin pkg
-)
-rm -rf "$PKG_TMP"
-echo "pkg branch updated"
+# GitHub Contents API (timeout 600s) — clone ветки pkg слишком тяжёлый
+python3 - "$NAME" "$VER" <<'PY'
+import base64, json, os, sys, urllib.request, ssl
+name, ver = sys.argv[1], sys.argv[2]
+token = os.popen("gh auth token").read().strip()
+repo = "initialfox/yandex-station-repo"
+ctx = ssl.create_default_context()
 
-# main — исходники + packages.json
+def put(path, data, msg, branch):
+    api = f"https://api.github.com/repos/{repo}/contents/{path}"
+    req = urllib.request.Request(
+        api + f"?ref={branch}",
+        headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "User-Agent": "apkg"},
+    )
+    sha = None
+    try:
+        with urllib.request.urlopen(req, context=ctx, timeout=60) as r:
+            sha = json.load(r)["sha"]
+    except Exception:
+        pass
+    body = {"message": msg, "content": base64.b64encode(data).decode(), "branch": branch}
+    if sha:
+        body["sha"] = sha
+    req = urllib.request.Request(
+        api,
+        data=json.dumps(body).encode(),
+        method="PUT",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "apkg",
+            "Content-Type": "application/json",
+        },
+    )
+    with urllib.request.urlopen(req, context=ctx, timeout=600) as r:
+        print("OK", path, branch, json.load(r)["commit"]["sha"][:12])
+
+put(f"{name}.tar", open(f"dist/{name}.tar", "rb").read(), f"apkg: {name} {ver}", "pkg")
+put("packages.json", open("packages.json", "rb").read(), f"packages.json: {name}", "pkg")
+put("packages.json", open("packages.json", "rb").read(), f"packages.json: {name}", "main")
+PY
+
 git add "packages/$NAME" packages.json scripts/mk-alpine-pkg.sh scripts/one-pkg.sh 2>/dev/null || true
 git add "packages/$NAME" packages.json
-# убрать мешающий WIP
-git stash push -u -m "wip-other-pkgs" -- packages/rsync packages/tmux packages/wget 2>/dev/null || true
-if ! git diff --cached --quiet || ! git diff --quiet -- packages.json "packages/$NAME" 2>/dev/null; then
-  git commit -m "apkg: ${NAME} ${VER}" || true
-fi
-git pull --rebase origin main
-git push origin HEAD
-git stash pop 2>/dev/null || true
+git commit -m "apkg: ${NAME} ${VER}" || true
+git pull --rebase origin main || true
+git push origin HEAD || true
 
 echo "======== TG ========"
 if [[ "$IS_NEW" == "1" ]]; then
