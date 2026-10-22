@@ -253,7 +253,7 @@
       "bin": "ncdu",
       "dest": "/data/local/opt/ncdu",
       "check": "/data/local/opt/ncdu/bin/ncdu",
-      "md5": "5e684fdfcb098eeaa773e8819de59986",
+      "md5": "1daf0e21015bf3c7e773dbe6e8dcaf05",
       "size": 1858048
     },
     {
