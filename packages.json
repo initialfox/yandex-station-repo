@@ -131,6 +131,20 @@
       "size": 1826816
     },
     {
+      "name": "fd",
+      "version": "10.1.0",
+      "arch": "aarch64",
+      "description": "Простой find",
+      "category": "util",
+      "kind": "dir",
+      "asset": "fd.tar",
+      "bin": "fd",
+      "dest": "/data/local/opt/fd",
+      "check": "/data/local/opt/fd/bin/fd",
+      "md5": "559b491bdc64910e5164ecc5fb983ec6",
+      "size": 3237376
+    },
+    {
       "name": "ffmpeg",
       "version": "7.0.2",
       "arch": "aarch64",
