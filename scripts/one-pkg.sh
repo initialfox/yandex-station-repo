@@ -121,34 +121,43 @@ token = os.popen("gh auth token").read().strip()
 repo = "initialfox/yandex-station-repo"
 ctx = ssl.create_default_context()
 
-def put(path, data, msg, branch):
+def put(path, data, msg, branch, tries=4):
     api = f"https://api.github.com/repos/{repo}/contents/{path}"
-    req = urllib.request.Request(
-        api + f"?ref={branch}",
-        headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "User-Agent": "apkg"},
-    )
-    sha = None
-    try:
-        with urllib.request.urlopen(req, context=ctx, timeout=60) as r:
-            sha = json.load(r)["sha"]
-    except Exception:
-        pass
-    body = {"message": msg, "content": base64.b64encode(data).decode(), "branch": branch}
-    if sha:
-        body["sha"] = sha
-    req = urllib.request.Request(
-        api,
-        data=json.dumps(body).encode(),
-        method="PUT",
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/vnd.github+json",
-            "User-Agent": "apkg",
-            "Content-Type": "application/json",
-        },
-    )
-    with urllib.request.urlopen(req, context=ctx, timeout=600) as r:
-        print("OK", path, branch, json.load(r)["commit"]["sha"][:12])
+    content = base64.b64encode(data).decode()
+    for attempt in range(tries):
+        req = urllib.request.Request(
+            api + f"?ref={branch}",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json", "User-Agent": "apkg"},
+        )
+        sha = None
+        try:
+            with urllib.request.urlopen(req, context=ctx, timeout=60) as r:
+                sha = json.load(r)["sha"]
+        except Exception:
+            pass
+        body = {"message": msg, "content": content, "branch": branch}
+        if sha:
+            body["sha"] = sha
+        req = urllib.request.Request(
+            api,
+            data=json.dumps(body).encode(),
+            method="PUT",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "apkg",
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, context=ctx, timeout=600) as r:
+                print("OK", path, branch, json.load(r)["commit"]["sha"][:12])
+                return
+        except Exception as e:
+            if "409" in str(e) and attempt + 1 < tries:
+                print("retry 409", path, branch, attempt + 1)
+                continue
+            raise
 
 put(f"{name}.tar", open(f"dist/{name}.tar", "rb").read(), f"apkg: {name} {ver}", "pkg")
 put("packages.json", open("packages.json", "rb").read(), f"packages.json: {name}", "pkg")
