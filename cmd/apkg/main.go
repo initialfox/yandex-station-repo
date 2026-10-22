@@ -20,12 +20,126 @@ import (
 const (
 	defaultIndexURL = "https://cdn.jsdelivr.net/gh/initialfox/yandex-station-repo@main/packages.json"
 	defaultBaseURL  = "https://github.com/initialfox/yandex-station-repo/releases/latest/download"
-	defaultBindir   = "/data/local/bin"
-	defaultOpt      = "/data/local/opt"
-	defaultCache    = "/sdcard/apkg-cache"
-	defaultState    = "/data/local/apkg"
-	version         = "1.0.0"
+	version         = "1.0.1"
 )
+
+// paths — Station 1 (Android: /data/local, /sdcard) vs gen2+ (buildroot: /opt, /usr/local, /tmp).
+type paths struct {
+	Bindir string
+	Opt    string
+	Cache  string
+	State  string
+	Flavor string // "android" | "buildroot"
+}
+
+var P paths
+
+func init() {
+	P = detectPaths()
+}
+
+func detectPaths() paths {
+	// явные override
+	p := paths{
+		Bindir: os.Getenv("APKG_BINDIR"),
+		Opt:    os.Getenv("APKG_OPT"),
+		Cache:  os.Getenv("APKG_CACHE"),
+		State:  os.Getenv("APKG_STATE"),
+	}
+
+	android := dirWritable("/data/local") || fileExists("/system/bin/linker64") || fileExists("/system/bin/linker")
+	// buildroot / полноценный Linux на колонках 2+
+	buildroot := fileExists("/bin/sh") && !fileExists("/system/bin/linker64") &&
+		(dirExists("/bkupgrade") || dirExists("/etc/os-release") || !dirExists("/system/bin"))
+
+	if android && !buildroot {
+		p.Flavor = "android"
+		if p.Bindir == "" {
+			p.Bindir = "/data/local/bin"
+		}
+		if p.Opt == "" {
+			p.Opt = "/data/local/opt"
+		}
+		if p.State == "" {
+			p.State = "/data/local/apkg"
+		}
+		if p.Cache == "" {
+			// /sdcard есть не всегда; /data/local/tmp иногда SELinux — пробуем по очереди
+			p.Cache = firstWritableDir(
+				"/sdcard/apkg-cache",
+				"/data/local/tmp/apkg-cache",
+				"/data/local/apkg/cache",
+				"/tmp/apkg-cache",
+			)
+		}
+	} else {
+		p.Flavor = "buildroot"
+		if p.Bindir == "" {
+			p.Bindir = firstWritableDir("/usr/local/bin", "/opt/bin", "/usr/bin", "/bin")
+		}
+		if p.Opt == "" {
+			// gen2 часто: /bkupgrade/data/local/opt или просто /opt
+			p.Opt = firstWritableDir(
+				"/bkupgrade/data/local/opt",
+				"/data/local/opt",
+				"/opt/alice",
+				"/opt",
+				"/usr/local/opt",
+			)
+		}
+		if p.State == "" {
+			p.State = firstWritableDir(
+				"/var/lib/apkg",
+				"/bkupgrade/data/local/apkg",
+				"/data/local/apkg",
+				"/opt/apkg",
+				"/tmp/apkg-state",
+			)
+		}
+		if p.Cache == "" {
+			p.Cache = firstWritableDir(
+				"/var/cache/apkg",
+				"/tmp/apkg-cache",
+				"/bkupgrade/data/local/tmp/apkg-cache",
+				filepath.Join(p.State, "cache"),
+			)
+		}
+	}
+	return p
+}
+
+func dirExists(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && st.IsDir()
+}
+
+func dirWritable(p string) bool {
+	if !dirExists(p) {
+		if err := os.MkdirAll(p, 0755); err != nil {
+			return false
+		}
+	}
+	f := filepath.Join(p, ".apkg-write-test")
+	if err := os.WriteFile(f, []byte("1"), 0644); err != nil {
+		return false
+	}
+	_ = os.Remove(f)
+	return true
+}
+
+func firstWritableDir(cands ...string) string {
+	for _, c := range cands {
+		if c == "" {
+			continue
+		}
+		if dirWritable(c) {
+			return c
+		}
+	}
+	// last resort
+	_ = os.MkdirAll("/tmp/apkg", 0755)
+	return "/tmp/apkg"
+}
 
 type pkgMeta struct {
 	Name        string `json:"name"`
@@ -88,6 +202,8 @@ func main() {
 		must(cmdRemove(rest))
 	case "upgrade":
 		must(cmdUpgrade(rest))
+	case "paths":
+		fmt.Printf("flavor %s\nbindir %s\nopt    %s\nstate  %s\ncache  %s\n", P.Flavor, P.Bindir, P.Opt, P.State, P.Cache)
 	default:
 		fmt.Fprintf(os.Stderr, "неизвестная команда: %s\n", cmd)
 		printHelp()
@@ -96,7 +212,7 @@ func main() {
 }
 
 func printHelp() {
-	fmt.Print(`apkg — пакетный менеджер Яндекс.Станции (один бинарь)
+	fmt.Printf(`apkg — пакетный менеджер Яндекс.Станции (один бинарь)
 
   apkg update              обновить индекс
   apkg list [-i]           все пакеты (+ статус)
@@ -105,17 +221,20 @@ func printHelp() {
   apkg install <имя…>      поставить
   apkg remove <имя…>       удалить
   apkg upgrade [имя…]      обновить
+  apkg paths               куда ставит на этой колонке
 
-Musl-пакеты (nano, nmap, openvpn…): ставятся целиком в /data/local/opt/<имя>
-с lib/ и обёрткой *-run → /data/local/bin/<имя>.
-Голый ELF без loader даёт «not found» — всегда запускай через имя в PATH
-или …/opt/<имя>/<имя>-run.
+Сейчас: flavor=%s
+  bindir %s
+  opt    %s
+  state  %s
+  cache  %s
 
-Переменные:
-  APKG_INDEX   URL packages.json
-  APKG_BASE    URL релизов (…/download)
-  APKG_BINDIR  куда класть команды (по умолч. /data/local/bin)
-`)
+Musl-пакеты: целиком в opt/<имя> + symlink в bindir.
+Обёртки: #!/bin/sh и DIR=dirname (Android Station 1 и buildroot gen2+).
+Не запускай голый ELF из bin/ — будет «not found».
+
+Переменные: APKG_INDEX APKG_BASE APKG_BINDIR APKG_OPT APKG_CACHE APKG_STATE
+`, P.Flavor, P.Bindir, P.Opt, P.State, P.Cache)
 }
 
 func must(err error) {
@@ -143,20 +262,23 @@ func baseURL(repo *repoMeta) string {
 }
 
 func bindir() string {
-	if v := os.Getenv("APKG_BINDIR"); v != "" {
-		return v
-	}
-	return defaultBindir
+	_ = os.MkdirAll(P.Bindir, 0755)
+	return P.Bindir
+}
+
+func optDir() string {
+	_ = os.MkdirAll(P.Opt, 0755)
+	return P.Opt
 }
 
 func stateDir() string {
-	_ = os.MkdirAll(defaultState, 0755)
-	return defaultState
+	_ = os.MkdirAll(P.State, 0755)
+	return P.State
 }
 
 func cacheDir() string {
-	_ = os.MkdirAll(defaultCache, 0755)
-	return defaultCache
+	_ = os.MkdirAll(P.Cache, 0755)
+	return P.Cache
 }
 
 func cmdUpdate() error {
@@ -454,23 +576,49 @@ func removeOne(p pkgMeta) error {
 }
 
 func installDest(p pkgMeta) string {
+	// dest из индекса часто заточен под Station 1 (/data/local/opt/…) —
+	// на buildroot подменяем префикс на P.Opt
 	if p.Dest != "" {
-		return p.Dest
+		return remapDest(p.Dest)
 	}
 	if p.Kind == "dir" {
-		return filepath.Join(defaultOpt, p.Name)
+		return filepath.Join(optDir(), p.Name)
 	}
 	return filepath.Join(bindir(), or(p.Bin, p.Name))
 }
 
+func remapDest(dest string) string {
+	// /data/dropbear оставляем как особый случай на android; на buildroot → opt/dropbear
+	if strings.HasPrefix(dest, "/data/local/opt/") {
+		return filepath.Join(optDir(), strings.TrimPrefix(dest, "/data/local/opt/"))
+	}
+	if dest == "/data/dropbear" && P.Flavor == "buildroot" {
+		return filepath.Join(optDir(), "dropbear")
+	}
+	if strings.HasPrefix(dest, "/data/local/bin/") {
+		return filepath.Join(bindir(), filepath.Base(dest))
+	}
+	return dest
+}
+
 func checkPath(p pkgMeta) string {
+	bin := or(p.Bin, p.Name)
+	// установлен = команда в bindir (symlink/wrapper) или check с remap
+	if _, err := os.Stat(filepath.Join(bindir(), bin)); err == nil {
+		return filepath.Join(bindir(), bin)
+	}
 	if p.Check != "" {
-		return p.Check
+		return remapDest(p.Check)
 	}
 	if p.Kind == "dir" {
-		return filepath.Join(installDest(p), or(p.Bin, p.Name))
+		d := installDest(p)
+		cand := filepath.Join(d, "bin", bin)
+		if fileExists(cand) {
+			return cand
+		}
+		return filepath.Join(d, bin)
 	}
-	return filepath.Join(bindir(), or(p.Bin, p.Name))
+	return filepath.Join(bindir(), bin)
 }
 
 func isInstalled(p pkgMeta) bool {
@@ -567,10 +715,14 @@ func downloadCurl(url, dst string) error {
 
 func untar(archive, dest string) error {
 	_ = os.MkdirAll(dest, 0755)
+	// buildroot: обычный tar; android: toybox tar
 	var cmd *exec.Cmd
-	if _, err := exec.LookPath("toybox"); err == nil {
-		cmd = exec.Command("toybox", "tar", "-xf", archive, "-C", dest)
-	} else {
+	if P.Flavor == "android" {
+		if _, err := exec.LookPath("toybox"); err == nil {
+			cmd = exec.Command("toybox", "tar", "-xf", archive, "-C", dest)
+		}
+	}
+	if cmd == nil {
 		cmd = exec.Command("tar", "-xf", archive, "-C", dest)
 	}
 	out, err := cmd.CombinedOutput()
@@ -610,6 +762,13 @@ func fileMD5(path string) (string, error) {
 }
 
 func tryXbin(dst, bin string) {
+	// только Android Station 1; на buildroot /system нет
+	if P.Flavor != "android" {
+		return
+	}
+	if !dirExists("/system/xbin") {
+		return
+	}
 	xbin := filepath.Join("/system/xbin", bin)
 	_ = exec.Command("mount", "-o", "remount,rw", "/system").Run()
 	_ = os.Remove(xbin)
