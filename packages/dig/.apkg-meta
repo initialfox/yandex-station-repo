@@ -1,0 +1,7 @@
+version=9.18.27
+category=net
+kind=dir
+dest=/data/local/opt/dig
+check=/data/local/opt/dig/bin/dig
+description=dig/host/nslookup
+bin=dig
