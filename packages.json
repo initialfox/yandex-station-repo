@@ -594,6 +594,20 @@
       "size": 8159744
     },
     {
+      "name": "parallel",
+      "version": "20240422",
+      "arch": "aarch64",
+      "description": "GNU parallel",
+      "category": "util",
+      "kind": "dir",
+      "asset": "parallel.tar",
+      "bin": "parallel",
+      "dest": "/data/local/opt/parallel",
+      "check": "/data/local/opt/parallel/bin/parallel",
+      "md5": "2e940c52278516dae2bc11aad6a94757",
+      "size": 21776384
+    },
+    {
       "name": "patch",
       "version": "2.7.6",
       "arch": "aarch64",
