@@ -1,0 +1,7 @@
+version=0.95
+category=net
+kind=dir
+dest=/data/local/opt/mtr
+check=/data/local/opt/mtr/bin/mtr
+description=My Traceroute
+bin=mtr
