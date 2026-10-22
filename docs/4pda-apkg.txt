@@ -1,0 +1,83 @@
+[SIZE=4][B]apkg — пакетный менеджер для Яндекс.Станции[/B][/SIZE]
+[SIZE=2]Android + buildroot · aarch64 · [URL=https://github.com/initialfox/yandex-station-repo]GitHub[/URL][/SIZE]
+
+[QUOTE]Нужен [B]root[/B] (SSH или ADB).
+Работает на двух вариантах ОС колонки:
+[LIST]
+[*] [B]Android[/B] — пути /data/local/bin, /data/local/opt
+[*] [B]buildroot[/B] — /usr/local/bin или /opt (часто rootfs read-only → remount rw)
+[/LIST]
+[/QUOTE]
+
+Один бинарь [B]apkg[/B]. Пакеты качаются с GitHub (ветка [B]pkg[/B]), не нужно тащить всё вручную.
+
+[B]Репозиторий:[/B] [URL=https://github.com/initialfox/yandex-station-repo]github.com/initialfox/yandex-station-repo[/URL]
+[B]README:[/B] [URL=https://github.com/initialfox/yandex-station-repo/blob/main/README.md]инструкция[/URL]
+
+[HR]
+
+[SPOILER=Быстрая установка (ADB с компа)]
+[CODE]
+git clone https://github.com/initialfox/yandex-station-repo.git
+cd yandex-station-repo
+./scripts/install-adb.sh
+# или конкретное устройство:
+./scripts/install-adb.sh -s IP:5555
+[/CODE]
+Скрипт сам определит Android / buildroot, на buildroot сделает remount rw.
+[/SPOILER]
+
+[SPOILER=Установка по SSH / на станции]
+Если DNS на колонке нормальный:
+
+[CODE]
+curl -kfsSL https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
+[/CODE]
+
+Часто DNS битый ([B]Could not resolve host[/B]) — тогда:
+
+[CODE]
+curl -kfsSL --resolve raw.githubusercontent.com:443:185.199.108.133 \
+  https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
+[/CODE]
+
+На [B]buildroot[/B] перед этим, если read-only:
+
+[CODE]
+mount -o remount,rw /
+[/CODE]
+
+[B]-k[/B] у curl обязателен: на колонке часто нет CA.
+[/SPOILER]
+
+[SPOILER=Команды]
+[CODE]
+apkg paths              # flavor: android или buildroot
+apkg update
+apkg list
+apkg search vpn
+apkg install nano curl btop openvpn
+apkg remove nano
+apkg upgrade
+[/CODE]
+
+После установки бинари в PATH (Android: /data/local/bin, buildroot: /usr/local/bin).
+Musl-пакеты запускай через имя из PATH (обёртка), не голый ELF из opt/.../bin/.
+[/SPOILER]
+
+[SPOILER=Что уже есть в репе]
+Смотри актуальный список: [URL=https://github.com/initialfox/yandex-station-repo/blob/main/packages.json]packages.json[/URL]
+
+Примеры: nano, curl, btop, dropbear, ffmpeg, nmap, openvpn, wireguard, sqlite, darkhttpd, zsh, …
+[/SPOILER]
+
+[SPOILER=Хочу добавить свой пакет]
+Кратко: aarch64, musl-бандл или static, обёртка #!/bin/sh, структура packages/<имя>/.
+Подробно: [URL=https://github.com/initialfox/yandex-station-repo/blob/main/README.md]README → «Как добавить пакет»[/URL]
+
+[B]Прислать в репу:[/B] пиши в Telegram в личку [B][URL=https://t.me/initialfox]@initialfox[/URL][/B]
+— архив / ссылка + что за утилита. Могу спокойно залить бинарники в репозиторий.
+[/SPOILER]
+
+[HR]
+[SIZE=2]Вопросы / пакеты / баги — [URL=https://t.me/initialfox]@initialfox[/URL] (ЛС) или Issues на GitHub.[/SIZE]
