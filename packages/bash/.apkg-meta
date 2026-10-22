@@ -1,0 +1,7 @@
+version=5.2.26
+category=shell
+kind=dir
+dest=/data/local/opt/bash
+check=/data/local/opt/bash/bin/bash
+description=GNU Bash
+bin=bash

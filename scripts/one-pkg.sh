@@ -46,18 +46,12 @@ OUT=$(ssh_st "/system/bin/sh -c '
   RUN=./$NAME/${NAME}-run
   OV=/data/local/tmp/apkg-ov.txt
   ok=0
-  \$RUN --version >\$OV 2>&1 || true
+  # сначала короткие флаги (-V/-h), --version у некоторых утилит странно себя ведёт
+  \$RUN -V >\$OV 2>&1 || \$RUN --version >\$OV 2>&1 || \$RUN -h >\$OV 2>&1 || \$RUN >\$OV 2>&1 || true
   if grep -qiE \"Error loading shared library|cannot open shared object\" \$OV; then
     ok=0
   elif grep -qiE \"[0-9]+\\.[0-9]+|[0-9]{2,}|usage|Usage|option|Syntax|Copyright|comes with|socat\" \$OV; then
     ok=1
-  else
-    \$RUN -V >\$OV 2>&1 || \$RUN -h >\$OV 2>&1 || \$RUN >\$OV 2>&1 || true
-    if grep -qiE \"Error loading shared library|cannot open shared object\" \$OV; then
-      ok=0
-    elif grep -qiE \"[0-9]+\\.[0-9]+|[0-9]{2,}|usage|Usage|option|Syntax|Copyright|comes with\" \$OV; then
-      ok=1
-    fi
   fi
   dd if=\$OV bs=240 count=1 2>/dev/null; echo
   rm -rf $NAME ${NAME}-one.tar \$OV
