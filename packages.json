@@ -439,6 +439,20 @@
       "size": 1138176
     },
     {
+      "name": "wget",
+      "version": "1.24.5",
+      "arch": "aarch64",
+      "description": "HTTP/FTP загрузчик",
+      "category": "net",
+      "kind": "dir",
+      "asset": "wget.tar",
+      "bin": "wget",
+      "dest": "/data/local/opt/wget",
+      "check": "/data/local/opt/wget/bin/wget",
+      "md5": "5a8fe375a4f97d699ad131ae9bfe6728",
+      "size": 12424704
+    },
+    {
       "name": "wireguard",
       "version": "1.0.0",
       "arch": "aarch64",
