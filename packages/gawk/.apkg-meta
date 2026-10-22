@@ -1,0 +1,7 @@
+version=5.3.0
+category=util
+kind=dir
+dest=/data/local/opt/gawk
+check=/data/local/opt/gawk/bin/gawk
+description=GNU AWK
+bin=gawk
