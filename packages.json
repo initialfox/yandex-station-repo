@@ -117,6 +117,20 @@
       "size": 9080320
     },
     {
+      "name": "jq",
+      "version": "1.7.1",
+      "arch": "aarch64",
+      "description": "JSON процессор",
+      "category": "util",
+      "kind": "dir",
+      "asset": "jq.tar",
+      "bin": "jq",
+      "dest": "/data/local/opt/jq",
+      "check": "/data/local/opt/jq/bin/jq",
+      "md5": "713064cabbc5b8e4f9a7ac8fcdc9a808",
+      "size": 2022912
+    },
+    {
       "name": "miniserve",
       "version": "0.29.0",
       "arch": "aarch64",
