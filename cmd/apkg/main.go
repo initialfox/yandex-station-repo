@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,7 +23,7 @@ import (
 const (
 	defaultIndexURL = "https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json"
 	defaultBaseURL  = "https://github.com/initialfox/yandex-station-repo/releases/latest/download"
-	version         = "1.0.2"
+	version         = "1.0.3"
 )
 
 // только GitHub (без CDN): raw + releases asset
@@ -207,27 +208,27 @@ var httpClient = &http.Client{
 	Timeout: 120 * time.Second,
 	Transport: &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // станция без CA
+		// HTTP/2 на Android/bionic иногда ломается
+		ForceAttemptHTTP2: false,
+		TLSNextProto:      map[string]func(authority string, c *tls.Conn) http.RoundTripper{},
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			host, port, err := net.SplitHostPort(addr)
 			if err != nil {
 				return nil, err
 			}
-			// IP — без DNS
 			if ip := net.ParseIP(host); ip != nil {
 				d := net.Dialer{Timeout: 15 * time.Second}
 				return d.DialContext(ctx, network, addr)
 			}
-			ips, err := dnsResolver.LookupIPAddr(ctx, host)
+			ips, err := lookupPreferV4(ctx, host)
 			if err != nil || len(ips) == 0 {
-				// системный DNS как запасной
 				d := net.Dialer{Timeout: 15 * time.Second}
 				return d.DialContext(ctx, network, addr)
 			}
 			d := net.Dialer{Timeout: 15 * time.Second}
 			var last error
-			for _, ipa := range ips {
-				target := net.JoinHostPort(ipa.IP.String(), port)
-				c, err := d.DialContext(ctx, network, target)
+			for _, ip := range ips {
+				c, err := d.DialContext(ctx, network, net.JoinHostPort(ip, port))
 				if err == nil {
 					return c, nil
 				}
@@ -236,6 +237,37 @@ var httpClient = &http.Client{
 			return nil, last
 		},
 	},
+}
+
+func lookupPreferV4(ctx context.Context, host string) ([]string, error) {
+	addrs, err := dnsResolver.LookupIPAddr(ctx, host)
+	if err != nil {
+		return nil, err
+	}
+	var v4, v6 []string
+	for _, a := range addrs {
+		s := a.IP.String()
+		if a.IP.To4() != nil {
+			v4 = append(v4, s)
+		} else {
+			v6 = append(v6, s)
+		}
+	}
+	out := append(v4, v6...)
+	if len(out) == 0 {
+		return nil, fmt.Errorf("нет A/AAAA для %s", host)
+	}
+	return out, nil
+}
+
+// хосты GitHub-редиректов (releases → objects/release-assets)
+var githubHosts = []string{
+	"github.com",
+	"raw.githubusercontent.com",
+	"objects.githubusercontent.com",
+	"release-assets.githubusercontent.com",
+	"codeload.github.com",
+	"api.github.com",
 }
 
 func main() {
@@ -782,18 +814,26 @@ func fetchIndexURL(u string) (*repoMeta, []byte, error) {
 	return &m, b, nil
 }
 
-func download(url, dst string) error {
-	fmt.Printf("  ↓ %s\n", url)
-	req, _ := http.NewRequest("GET", url, nil)
+func download(rawURL, dst string) error {
+	fmt.Printf("  ↓ %s\n", rawURL)
+	// на колонке системный DNS мёртв (::1:53) — сразу curl -k с --resolve
+	if err := downloadCurl(rawURL, dst); err == nil {
+		return nil
+	} else {
+		fmt.Fprintf(os.Stderr, "  · curl: %v — пробую встроенный HTTP\n", err)
+	}
+	req, err := http.NewRequest("GET", rawURL, nil)
+	if err != nil {
+		return err
+	}
 	req.Header.Set("User-Agent", "apkg/"+version)
 	res, err := httpClient.Do(req)
 	if err != nil {
-		// fallback: системный curl -k
-		return downloadCurl(url, dst)
+		return err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return downloadCurl(url, dst)
+		return fmt.Errorf("HTTP %d", res.StatusCode)
 	}
 	f, err := os.Create(dst)
 	if err != nil {
@@ -804,8 +844,7 @@ func download(url, dst string) error {
 	return err
 }
 
-func downloadCurl(url, dst string) error {
-	curl := "curl"
+func findCurl() string {
 	for _, c := range []string{
 		filepath.Join(P.Bindir, "curl"),
 		"/data/local/bin/curl",
@@ -814,14 +853,53 @@ func downloadCurl(url, dst string) error {
 		"/bin/curl",
 	} {
 		if _, err := os.Stat(c); err == nil {
-			curl = c
-			break
+			return c
 		}
 	}
-	cmd := exec.Command(curl, "-kfL", "--retry", "3", "--connect-timeout", "15", "-o", dst, url)
+	return "curl"
+}
+
+func downloadCurl(rawURL, dst string) error {
+	curl := findCurl()
+	args := []string{
+		"-kfL", // -k обязательно: на станции нет CA
+		"--retry", "3",
+		"--connect-timeout", "20",
+		"--max-time", "300",
+		"-o", dst,
+	}
+	args = append(args, curlResolveFlags(rawURL)...)
+	args = append(args, rawURL)
+	cmd := exec.Command(curl, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+// curlResolveFlags — обход битого resolv.conf: резолвим сами, curl --resolve host:443:ip
+func curlResolveFlags(rawURL string) []string {
+	hosts := map[string]struct{}{}
+	if u, err := url.Parse(rawURL); err == nil && u.Hostname() != "" {
+		hosts[u.Hostname()] = struct{}{}
+	}
+	for _, h := range githubHosts {
+		hosts[h] = struct{}{}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	var flags []string
+	for h := range hosts {
+		ips, err := lookupPreferV4(ctx, h)
+		if err != nil || len(ips) == 0 {
+			continue
+		}
+		ip := ips[0]
+		flags = append(flags,
+			"--resolve", fmt.Sprintf("%s:443:%s", h, ip),
+			"--resolve", fmt.Sprintf("%s:80:%s", h, ip),
+		)
+	}
+	return flags
 }
 
 func untar(archive, dest string) error {
