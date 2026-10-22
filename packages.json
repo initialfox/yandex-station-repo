@@ -411,6 +411,20 @@
       "size": 4344320
     },
     {
+      "name": "sshpass",
+      "version": "1.10",
+      "arch": "aarch64",
+      "description": "SSH с паролем в CLI",
+      "category": "net",
+      "kind": "dir",
+      "asset": "sshpass.tar",
+      "bin": "sshpass",
+      "dest": "/data/local/opt/sshpass",
+      "check": "/data/local/opt/sshpass/bin/sshpass",
+      "md5": "d6748f46c9d6c98f91cfb3ebe4bb30eb",
+      "size": 806912
+    },
+    {
       "name": "strace",
       "version": "6.9",
       "arch": "aarch64",
