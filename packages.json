@@ -375,13 +375,12 @@
       "description": "Node.js",
       "category": "lang",
       "kind": "dir",
-      "asset": "node.tar",
+      "asset": "node.tar.gz",
       "bin": "node",
       "dest": "/data/local/opt/node",
       "check": "/data/local/opt/node/bin/node",
-      "md5": "28225e20c82e78075012a62d7f94dd44",
-      "size": 67896832,
-      "url": "https://github.com/initialfox/yandex-station-repo/releases/download/apkg-files/node.tar"
+      "md5": "b3486c33cfcd9b15c257bcbc8b6dbe55",
+      "size": 25268805
     },
     {
       "name": "openssl",
