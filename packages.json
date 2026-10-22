@@ -15,7 +15,7 @@
       "asset": "apkg",
       "bin": "apkg",
       "check": "/data/local/bin/apkg",
-      "md5": "3fe27fde3efed959ba71c8281d8868eb",
+      "md5": "666f119b83948765c4e6cf2fe945435f",
       "size": 6291616
     },
     {
@@ -80,12 +80,13 @@
       "arch": "aarch64",
       "description": "Системная информация",
       "category": "system",
-      "kind": "file",
+      "kind": "dir",
       "asset": "fastfetch.tar",
       "bin": "fastfetch",
-      "check": "/data/local/bin/fastfetch",
+      "check": "/data/local/opt/fastfetch/fastfetch",
       "md5": "43aa680d45216b23872d23c45e570ac7",
-      "size": 1826816
+      "size": 1826816,
+      "dest": "/data/local/opt/fastfetch"
     },
     {
       "name": "ffmpeg",
@@ -93,12 +94,13 @@
       "arch": "aarch64",
       "description": "Медиаконвертер",
       "category": "media",
-      "kind": "file",
+      "kind": "dir",
       "asset": "ffmpeg.tar",
       "bin": "ffmpeg",
-      "check": "/data/local/bin/ffmpeg",
+      "check": "/data/local/opt/ffmpeg/ffmpeg",
       "md5": "af66a18a02013932c7d78c7d6b2a264f",
-      "size": 51138560
+      "size": 51138560,
+      "dest": "/data/local/opt/ffmpeg"
     },
     {
       "name": "iperf3",
@@ -120,12 +122,13 @@
       "arch": "aarch64",
       "description": "HTTP file server",
       "category": "net",
-      "kind": "file",
+      "kind": "dir",
       "asset": "miniserve.tar",
       "bin": "miniserve",
-      "check": "/data/local/bin/miniserve",
+      "check": "/data/local/opt/miniserve/miniserve",
       "md5": "cf0464cec8a0991b4bf48dc3e33b4639",
-      "size": 2060800
+      "size": 2060800,
+      "dest": "/data/local/opt/miniserve"
     },
     {
       "name": "nano",
@@ -217,12 +220,13 @@
       "arch": "aarch64",
       "description": "Z shell (static musl)",
       "category": "shell",
-      "kind": "file",
+      "kind": "dir",
       "asset": "zsh.tar",
       "bin": "zsh",
-      "check": "/data/local/bin/zsh",
+      "check": "/data/local/opt/zsh/zsh",
       "md5": "68588b1ad057186004ca4ddc5a31b722",
-      "size": 1707520
+      "size": 1707520,
+      "dest": "/data/local/opt/zsh"
     }
   ]
 }
