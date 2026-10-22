@@ -75,6 +75,20 @@
       "size": 16100352
     },
     {
+      "name": "bottom",
+      "version": "0.9.6",
+      "arch": "aarch64",
+      "description": "Системный монитор btm",
+      "category": "system",
+      "kind": "dir",
+      "asset": "bottom.tar",
+      "bin": "btm",
+      "dest": "/data/local/opt/bottom",
+      "check": "/data/local/opt/bottom/bin/btm",
+      "md5": "a6baef8efd46eb6a3d9c32157168056b",
+      "size": 3839488
+    },
+    {
       "name": "btop",
       "version": "1.4.7",
       "arch": "aarch64",
