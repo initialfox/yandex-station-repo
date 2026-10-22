@@ -1,0 +1,6 @@
+#!/system/bin/sh
+DIR=/data/local/opt/curl
+export CURL_CA_BUNDLE="${CURL_CA_BUNDLE:-$DIR/cacert.pem}"
+export SSL_CERT_FILE="${SSL_CERT_FILE:-$DIR/cacert.pem}"
+export SSL_CERT_DIR="${SSL_CERT_DIR:-}"
+exec "$DIR/bin/curl" "$@"

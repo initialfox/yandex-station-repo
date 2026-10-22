@@ -1,0 +1,5 @@
+#!/system/bin/sh
+DIR=/data/local/opt/wireguard
+export LD_LIBRARY_PATH="$DIR/lib:${LD_LIBRARY_PATH}"
+export PATH="$DIR/bin:$PATH"
+exec "$DIR/lib/ld-musl-aarch64.so.1" "$DIR/bin/wg" "$@"

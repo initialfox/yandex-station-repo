@@ -1,0 +1,3 @@
+#!/system/bin/sh
+# launcher: dropbear server (порт задай сам)
+exec /data/dropbear/dropbear "$@"
