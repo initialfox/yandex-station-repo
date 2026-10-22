@@ -381,6 +381,20 @@
       "check": "/data/local/opt/zsh/zsh",
       "md5": "68588b1ad057186004ca4ddc5a31b722",
       "size": 1707520
+    },
+    {
+      "name": "zstd",
+      "version": "1.5.6",
+      "arch": "aarch64",
+      "description": "Сжатие Zstandard",
+      "category": "util",
+      "kind": "dir",
+      "asset": "zstd.tar",
+      "bin": "zstd",
+      "dest": "/data/local/opt/zstd",
+      "check": "/data/local/opt/zstd/bin/zstd",
+      "md5": "ecf58768ebe510b3da173a3fe4988cf7",
+      "size": 8184320
     }
   ]
 }
