@@ -24,7 +24,7 @@ const (
 	defaultIndexURL = "https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json"
 	// пакеты лежат на ветке pkg (raw), не в Releases
 	defaultBaseURL = "https://raw.githubusercontent.com/initialfox/yandex-station-repo/pkg"
-	version        = "1.0.5"
+	version        = "1.0.6"
 )
 
 // только GitHub raw
@@ -47,6 +47,15 @@ var P paths
 
 func init() {
 	P = detectPaths()
+	// Android: иначе Go tzdata орёт ANDROID_DATA/ROOT not set
+	if P.Flavor == "android" {
+		if os.Getenv("ANDROID_DATA") == "" {
+			_ = os.Setenv("ANDROID_DATA", "/data")
+		}
+		if os.Getenv("ANDROID_ROOT") == "" {
+			_ = os.Setenv("ANDROID_ROOT", "/system")
+		}
+	}
 }
 
 func detectPaths() paths {

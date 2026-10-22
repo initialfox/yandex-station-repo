@@ -54,20 +54,30 @@ cd yandex-station-repo
 
 На удалённой стороне — `install.sh` (Android / buildroot + remount rw).
 
-### SSH одной строкой
+### SSH / на станции одной строкой
+
+Если DNS на колонке живой:
 
 ```sh
 curl -kfsSL https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
 ```
 
+Если `Could not resolve host` (часто на Station 1, DNS → `::1:53`) — с `--resolve`:
+
 ```sh
-ssh root@IP 'curl -kfsSL https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh'
+curl -kfsSL --resolve raw.githubusercontent.com:443:185.199.108.133   https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
 ```
 
-На buildroot, если скрипт упёрся в read-only:
+Или надёжнее с компа через ADB push: `./scripts/install-adb.sh`
 
 ```sh
-ssh root@IP 'mount -o remount,rw /; curl -kfsSL https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh'
+ssh root@IP 'curl -kfsSL --resolve raw.githubusercontent.com:443:185.199.108.133 https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh'
+```
+
+Buildroot + read-only:
+
+```sh
+ssh root@IP 'mount -o remount,rw /; curl -kfsSL --resolve raw.githubusercontent.com:443:185.199.108.133 https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh'
 ```
 
 ---

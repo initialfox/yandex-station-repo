@@ -7,7 +7,7 @@
   "packages": [
     {
       "name": "apkg",
-      "version": "1.0.5",
+      "version": "1.0.6",
       "arch": "aarch64",
       "description": "Пакетный менеджер Alice",
       "category": "system",
@@ -15,7 +15,7 @@
       "asset": "apkg",
       "bin": "apkg",
       "check": "/data/local/bin/apkg",
-      "md5": "e2f2e50408c6988f8988401b4bccb76f",
+      "md5": "60647a687c0f9a34cde852729b4a40f4",
       "size": 6291616
     },
     {
