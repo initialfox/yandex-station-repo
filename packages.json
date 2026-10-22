@@ -285,6 +285,20 @@
       "size": 28178944
     },
     {
+      "name": "openssl",
+      "version": "3.3.2",
+      "arch": "aarch64",
+      "description": "OpenSSL CLI",
+      "category": "net",
+      "kind": "dir",
+      "asset": "openssl.tar",
+      "bin": "openssl",
+      "dest": "/data/local/opt/openssl",
+      "check": "/data/local/opt/openssl/bin/openssl",
+      "md5": "c066e042b974296d1220201e0527d76e",
+      "size": 7225856
+    },
+    {
       "name": "openvpn",
       "version": "2.6.20",
       "arch": "aarch64",
