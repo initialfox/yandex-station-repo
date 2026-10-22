@@ -299,6 +299,20 @@
       "size": 4344320
     },
     {
+      "name": "strace",
+      "version": "6.9",
+      "arch": "aarch64",
+      "description": "Трассировка syscalls",
+      "category": "debug",
+      "kind": "dir",
+      "asset": "strace.tar",
+      "bin": "strace",
+      "dest": "/data/local/opt/strace",
+      "check": "/data/local/opt/strace/bin/strace",
+      "md5": "82a23b71be6c2f8c1fbc54b776ff6e57",
+      "size": 6370816
+    },
+    {
       "name": "tcpdump",
       "version": "4.99.4",
       "arch": "aarch64",
