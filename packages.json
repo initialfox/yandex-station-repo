@@ -693,6 +693,20 @@
       "size": 2941440
     },
     {
+      "name": "sd",
+      "version": "1.0.0",
+      "arch": "aarch64",
+      "description": "sed для людей",
+      "category": "util",
+      "kind": "dir",
+      "asset": "sd.tar",
+      "bin": "sd",
+      "dest": "/data/local/opt/sd",
+      "check": "/data/local/opt/sd/bin/sd",
+      "md5": "eee4c1f6a357599b2d54df8be7213596",
+      "size": 2711552
+    },
+    {
       "name": "socat",
       "version": "1.8.0",
       "arch": "aarch64",
