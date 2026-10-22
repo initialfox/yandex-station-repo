@@ -285,6 +285,20 @@
       "size": 2702336
     },
     {
+      "name": "netcat",
+      "version": "1.226",
+      "arch": "aarch64",
+      "description": "netcat OpenBSD",
+      "category": "net",
+      "kind": "dir",
+      "asset": "netcat.tar",
+      "bin": "nc",
+      "dest": "/data/local/opt/netcat",
+      "check": "/data/local/opt/netcat/bin/nc",
+      "md5": "2369ef7e7832107498cfd2197ea49423",
+      "size": 1085952
+    },
+    {
       "name": "nmap",
       "version": "7.95",
       "arch": "aarch64",
