@@ -117,6 +117,20 @@
       "size": 1076736
     },
     {
+      "name": "gawk",
+      "version": "5.3.0",
+      "arch": "aarch64",
+      "description": "GNU AWK",
+      "category": "util",
+      "kind": "dir",
+      "asset": "gawk.tar",
+      "bin": "gawk",
+      "dest": "/data/local/opt/gawk",
+      "check": "/data/local/opt/gawk/bin/gawk",
+      "md5": "f9edc7fc3f530cbfccbcbd4e87ea1ddc",
+      "size": 2097152
+    },
+    {
       "name": "iperf3",
       "version": "3.17.1",
       "arch": "aarch64",
