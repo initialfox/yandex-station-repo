@@ -1,0 +1,7 @@
+version=1.7.1
+category=util
+kind=dir
+dest=/data/local/opt/jq
+check=/data/local/opt/jq/bin/jq
+description=JSON процессор
+bin=jq

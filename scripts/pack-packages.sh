@@ -57,6 +57,22 @@ for name in sorted(os.listdir(pkgs_dir)):
     ver, cat, kind, dest, check, desc = META.get(
         name, ("0.0.0", "misc", "dir", f"/data/local/opt/{name}", f"/data/local/opt/{name}", name)
     )
+    bin_name = name if name != "sqlite" else "sqlite3"
+    # .apkg-meta from mk-alpine-pkg.sh overrides defaults
+    meta_file = src / ".apkg-meta"
+    if meta_file.is_file():
+        kv = {}
+        for line in meta_file.read_text(encoding="utf-8").splitlines():
+            if "=" in line:
+                k, v = line.split("=", 1)
+                kv[k.strip()] = v.strip()
+        ver = kv.get("version", ver)
+        cat = kv.get("category", cat)
+        kind = kv.get("kind", kind)
+        dest = kv.get("dest", dest)
+        check = kv.get("check", check)
+        desc = kv.get("description", desc)
+        bin_name = kv.get("bin", bin_name)
     # file packages that are single binary folders (zsh, ffmpeg, miniserve, fastfetch)
     if kind == "file":
         # tar still contains packages/name structure; install extracts and finds bin
@@ -69,7 +85,7 @@ for name in sorted(os.listdir(pkgs_dir)):
         "category": cat,
         "kind": kind,
         "asset": asset,
-        "bin": name if name != "sqlite" else "sqlite3",
+        "bin": bin_name,
         "dest": dest,
         "check": check,
         "md5": md5,
