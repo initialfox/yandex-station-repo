@@ -482,6 +482,20 @@
       "size": 8159744
     },
     {
+      "name": "pip",
+      "version": "24.0",
+      "arch": "aarch64",
+      "description": "pip для Python 3",
+      "category": "lang",
+      "kind": "dir",
+      "asset": "pip.tar",
+      "bin": "pip3",
+      "dest": "/data/local/opt/pip",
+      "check": "/data/local/opt/pip/bin/pip3",
+      "md5": "f7359c81029c7f016947d308b2fea6cb",
+      "size": 33467392
+    },
+    {
       "name": "procps",
       "version": "4.0.4",
       "arch": "aarch64",
@@ -522,6 +536,20 @@
       "check": "/data/local/opt/python3/bin/python3",
       "md5": "5447085c469e778c8f08edbf2e7906bf",
       "size": 33533952
+    },
+    {
+      "name": "rclone",
+      "version": "1.66.0",
+      "arch": "aarch64",
+      "description": "Синхронизация с облаками",
+      "category": "net",
+      "kind": "dir",
+      "asset": "rclone.tar",
+      "bin": "rclone",
+      "dest": "/data/local/opt/rclone",
+      "check": "/data/local/opt/rclone/bin/rclone",
+      "md5": "332046f69a0d49366e18199512ba749f",
+      "size": 84699648
     },
     {
       "name": "ripgrep",
