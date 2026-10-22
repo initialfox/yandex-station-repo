@@ -1,0 +1,7 @@
+version=3.4
+category=shell
+kind=dir
+dest=/data/local/opt/tmux
+check=/data/local/opt/tmux/bin/tmux
+description=Терминальный мультиплексор
+bin=tmux
