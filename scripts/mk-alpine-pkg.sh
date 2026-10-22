@@ -354,14 +354,18 @@ esac
 # terminfo только для TUI
 case "$NAME" in
   tmux|htop|ncdu|less|nano|bash|screen|fzf)
-    if [[ -d "$WORK/root/usr/share/terminfo" ]]; then
-      mkdir -p "$OUT/share"
-      cp -a "$WORK/root/usr/share/terminfo" "$OUT/share/" 2>/dev/null || true
-    fi
-    if [[ -d "$WORK/root/etc/terminfo" ]]; then
-      mkdir -p "$OUT/share"
-      cp -a "$WORK/root/etc/terminfo" "$OUT/share/" 2>/dev/null || true
-    fi
+    mkdir -p "$OUT/share/terminfo"
+    for term in xterm xterm-256color screen screen-256color tmux tmux-256color linux vt100 ansi dumb; do
+      for base in "$WORK/root/usr/share/terminfo" "$WORK/root/etc/terminfo"; do
+        # terminfo: первый символ имени = подкаталог
+        sub=$(printf '%s' "$term" | cut -c1)
+        src="$base/$sub/$term"
+        if [[ -f "$src" ]]; then
+          mkdir -p "$OUT/share/terminfo/$sub"
+          cp -a "$src" "$OUT/share/terminfo/$sub/"
+        fi
+      done
+    done
     ;;
 esac
 
