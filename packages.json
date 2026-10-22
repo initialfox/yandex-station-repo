@@ -9,15 +9,14 @@
       "name": "apkg",
       "version": "1.0.0",
       "arch": "aarch64",
-      "description": "Пакетный менеджер станций (один бинарь)",
+      "description": "Пакетный менеджер Alice",
       "category": "system",
       "kind": "file",
       "asset": "apkg.tar",
       "bin": "apkg",
       "check": "/data/local/bin/apkg",
-      "md5": "9e9ff5169a51ecdaee021c167dcf90fe",
-      "size": 6296064,
-      "runtime": "static"
+      "md5": "686c822e8d2951bb5e1e640925778d27",
+      "size": 6296064
     },
     {
       "name": "btop",
@@ -30,9 +29,8 @@
       "bin": "btop",
       "dest": "/data/local/opt/btop",
       "check": "/data/local/opt/btop/bin/btop",
-      "md5": "f28417459410f52a73d75fa4d3ba62c8",
-      "size": 2195456,
-      "runtime": "static"
+      "md5": "6ca5cfbdc56f85e8e50ec9e818c6eb0a",
+      "size": 2195456
     },
     {
       "name": "curl",
@@ -45,9 +43,8 @@
       "bin": "curl",
       "dest": "/data/local/opt/curl",
       "check": "/data/local/opt/curl/bin/curl",
-      "md5": "d480a8c1dc3e3169f54ae68b3c3cd6c0",
-      "size": 8505344,
-      "runtime": "static"
+      "md5": "7c7940cc17ed475535a409519da281a6",
+      "size": 8505344
     },
     {
       "name": "darkhttpd",
@@ -60,9 +57,8 @@
       "bin": "darkhttpd",
       "dest": "/data/local/opt/darkhttpd",
       "check": "/data/local/opt/darkhttpd/bin/darkhttpd",
-      "md5": "7c4a263d7c9386a2abb91e89550caa77",
-      "size": 806400,
-      "runtime": "musl"
+      "md5": "e12e6ad49a463f564cd77411bf834459",
+      "size": 806400
     },
     {
       "name": "dropbear",
@@ -75,9 +71,8 @@
       "bin": "dropbear",
       "dest": "/data/dropbear",
       "check": "/data/dropbear/dropbear",
-      "md5": "0d262f917cec5f4a46964fb80a30398b",
-      "size": 1980928,
-      "runtime": "musl"
+      "md5": "e79bf295f11a5d6e366b15951dfef174",
+      "size": 1982976
     },
     {
       "name": "fastfetch",
@@ -90,8 +85,7 @@
       "bin": "fastfetch",
       "check": "/data/local/bin/fastfetch",
       "md5": "43aa680d45216b23872d23c45e570ac7",
-      "size": 1826816,
-      "runtime": "static"
+      "size": 1826816
     },
     {
       "name": "ffmpeg",
@@ -104,8 +98,7 @@
       "bin": "ffmpeg",
       "check": "/data/local/bin/ffmpeg",
       "md5": "af66a18a02013932c7d78c7d6b2a264f",
-      "size": 51138560,
-      "runtime": "static"
+      "size": 51138560
     },
     {
       "name": "iperf3",
@@ -118,9 +111,8 @@
       "bin": "iperf3",
       "dest": "/data/local/opt/iperf3",
       "check": "/data/local/opt/iperf3/bin/iperf3",
-      "md5": "ed7c8dc6b76aabc75575b7b6d25e3b57",
-      "size": 9080320,
-      "runtime": "musl"
+      "md5": "8e599cdd5a1d704c7759835d47403bfe",
+      "size": 9080320
     },
     {
       "name": "miniserve",
@@ -133,8 +125,7 @@
       "bin": "miniserve",
       "check": "/data/local/bin/miniserve",
       "md5": "cf0464cec8a0991b4bf48dc3e33b4639",
-      "size": 2060800,
-      "runtime": "static"
+      "size": 2060800
     },
     {
       "name": "nano",
@@ -147,9 +138,8 @@
       "bin": "nano",
       "dest": "/data/local/opt/nano",
       "check": "/data/local/opt/nano/bin/nano",
-      "md5": "71b2190f389b6d932a120c017f849209",
-      "size": 4205568,
-      "runtime": "musl"
+      "md5": "9abe49bf6bae68a83360b28a897fce75",
+      "size": 4205568
     },
     {
       "name": "nmap",
@@ -162,9 +152,8 @@
       "bin": "nmap",
       "dest": "/data/local/opt/nmap",
       "check": "/data/local/opt/nmap/bin/nmap",
-      "md5": "580805e538215d32b0c93e75ee397523",
-      "size": 28176896,
-      "runtime": "musl"
+      "md5": "db9b8106ed8819dc6da6fa077d288c00",
+      "size": 28178944
     },
     {
       "name": "openvpn",
@@ -177,9 +166,8 @@
       "bin": "openvpn",
       "dest": "/data/local/opt/openvpn",
       "check": "/data/local/opt/openvpn/bin/openvpn",
-      "md5": "b19b0dd7bc201be11cc8e531e0620889",
-      "size": 8152064,
-      "runtime": "musl"
+      "md5": "c1009cdb2d1a9ca93293d643776b7403",
+      "size": 8152064
     },
     {
       "name": "sqlite",
@@ -192,9 +180,8 @@
       "bin": "sqlite3",
       "dest": "/data/local/opt/sqlite",
       "check": "/data/local/opt/sqlite/bin/sqlite3",
-      "md5": "496639841103ebcaafad99a62071b61f",
-      "size": 4344320,
-      "runtime": "musl"
+      "md5": "d273b2326c91be7f4a283016bd85b1db",
+      "size": 4344320
     },
     {
       "name": "tcpdump",
@@ -207,9 +194,8 @@
       "bin": "tcpdump",
       "dest": "/data/local/opt/tcpdump",
       "check": "/data/local/opt/tcpdump/bin/tcpdump",
-      "md5": "2226ffbd1f8411f74f9ffe2edccf2c7f",
-      "size": 10270208,
-      "runtime": "musl"
+      "md5": "fc1a03ef17f62d2648101ea5578eda9a",
+      "size": 10270208
     },
     {
       "name": "wireguard",
@@ -222,9 +208,8 @@
       "bin": "wireguard",
       "dest": "/data/local/opt/wireguard",
       "check": "/data/local/opt/wireguard/bin/wg",
-      "md5": "cf9daa131c4add6c2a43eafcb3e46954",
-      "size": 824832,
-      "runtime": "musl"
+      "md5": "eca70623ad56a0e283d11e05435e8e64",
+      "size": 824832
     },
     {
       "name": "zsh",
@@ -237,8 +222,7 @@
       "bin": "zsh",
       "check": "/data/local/bin/zsh",
       "md5": "68588b1ad057186004ca4ddc5a31b722",
-      "size": 1707520,
-      "runtime": "static"
+      "size": 1707520
     }
   ]
 }
