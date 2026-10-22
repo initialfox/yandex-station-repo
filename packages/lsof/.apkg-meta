@@ -1,0 +1,7 @@
+version=4.99.3
+category=debug
+kind=dir
+dest=/data/local/opt/lsof
+check=/data/local/opt/lsof/bin/lsof
+description=Открытые файлы/сокеты
+bin=lsof
