@@ -19,6 +19,20 @@
       "size": 6296064
     },
     {
+      "name": "bash",
+      "version": "5.2.26",
+      "arch": "aarch64",
+      "description": "GNU Bash",
+      "category": "shell",
+      "kind": "dir",
+      "asset": "bash.tar",
+      "bin": "bash",
+      "dest": "/data/local/opt/bash",
+      "check": "/data/local/opt/bash/bin/bash",
+      "md5": "b278c43e3cd797cf068c3bb6e3401021",
+      "size": 3296768
+    },
+    {
       "name": "btop",
       "version": "1.4.7",
       "arch": "aarch64",
