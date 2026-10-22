@@ -24,7 +24,7 @@ const (
 	defaultIndexURL = "https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json"
 	// пакеты лежат на ветке pkg (raw), не в Releases
 	defaultBaseURL = "https://raw.githubusercontent.com/initialfox/yandex-station-repo/pkg"
-	version        = "1.0.4"
+	version        = "1.0.5"
 )
 
 // только GitHub raw
@@ -595,15 +595,13 @@ func installOne(repo *repoMeta, p pkgMeta) error {
 		wrap := ensureMuslWrapper(dest, bin, p)
 		dst := filepath.Join(bindir(), bin)
 		_ = os.MkdirAll(bindir(), 0755)
-		// symlink → обёртка в opt: dirname($0) = пакет (важно для gen2 /bkupgrade/data)
+		// НЕ symlink: dirname($0) у /system/xbin/btop и bindir-symlink ломает путь.
+		// В PATH — обёртка с абсолютным DIR=dest (пакет в opt).
 		_ = os.Remove(dst)
-		if err := os.Symlink(wrap, dst); err != nil {
-			// fallback: copy, но переписать DIR на абсолютный dest
-			if err2 := writeBoundWrapper(wrap, dest, bin, dst); err2 != nil {
-				return err2
-			}
+		if err := writeBoundWrapper(wrap, dest, bin, dst); err != nil {
+			return err
 		}
-		tryXbin(dst, bin)
+		tryXbin(dest, bin)
 		if p.Runtime == "musl" || fileExists(filepath.Join(dest, "lib", "ld-musl-aarch64.so.1")) {
 			fmt.Printf("  (musl: запускай «%s», не %s/bin/%s)\n", bin, dest, bin)
 		}
@@ -952,7 +950,7 @@ func fileMD5(path string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func tryXbin(dst, bin string) {
+func tryXbin(pkgDestOrBin, bin string) {
 	// только Android Station 1; на buildroot /system нет
 	if P.Flavor != "android" {
 		return
@@ -963,7 +961,17 @@ func tryXbin(dst, bin string) {
 	xbin := filepath.Join("/system/xbin", bin)
 	_ = exec.Command("mount", "-o", "remount,rw", "/system").Run()
 	_ = os.Remove(xbin)
-	_ = os.Symlink(dst, xbin)
+	// dir-пакет: обёртка с абсолютным DIR; file: копия бинаря
+	wrap := filepath.Join(pkgDestOrBin, bin+"-run")
+	if !fileExists(wrap) {
+		wrap = filepath.Join(pkgDestOrBin, bin+"-ssh")
+	}
+	if fileExists(wrap) && dirExists(pkgDestOrBin) {
+		_ = writeBoundWrapper(wrap, pkgDestOrBin, bin, xbin)
+	} else if fileExists(pkgDestOrBin) {
+		_ = copyFile(pkgDestOrBin, xbin)
+		_ = os.Chmod(xbin, 0755)
+	}
 	_ = exec.Command("mount", "-o", "remount,ro", "/system").Run()
 }
 
@@ -1023,25 +1031,50 @@ func ensureMuslWrapper(dest, bin string, p pkgMeta) string {
 	return wrap
 }
 
-// writeBoundWrapper — если symlink нельзя: копия с абсолютным DIR=dest.
+// writeBoundWrapper — обёртка в PATH/xbin с абсолютным DIR=пакет (не dirname $0).
 func writeBoundWrapper(srcWrap, dest, bin, dst string) error {
-	b, err := os.ReadFile(srcWrap)
-	if err != nil {
-		b = nil
-	}
-	body := string(b)
-	if !strings.Contains(body, "dirname") && !strings.Contains(body, "DIR=") {
-		body = ""
-	}
-	// всегда пишем портативный с абсолютным DIR на случай copy в bindir
 	relBin := "bin/" + bin
 	if !fileExists(filepath.Join(dest, "bin", bin)) && fileExists(filepath.Join(dest, bin)) {
 		relBin = bin
+	}
+	if b, err := os.ReadFile(srcWrap); err == nil && len(b) > 0 {
+		body := string(b)
+		// заменяем dirname($0) → абсолютный dest, остальное (btop env) сохраняем
+		repl := []string{
+			`DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)`,
+			`DIR=$(cd "$(dirname "$0")" && pwd)`,
+			`DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"`,
+		}
+		ok := false
+		for _, r := range repl {
+			if strings.Contains(body, r) {
+				body = strings.Replace(body, r, "DIR="+dest, 1)
+				ok = true
+				break
+			}
+		}
+		if ok || strings.Contains(body, "DIR=") {
+			if !ok {
+				// уже есть DIR= — переписать первую строку DIR=
+				lines := strings.Split(body, "\n")
+				for i, ln := range lines {
+					if strings.HasPrefix(ln, "DIR=") {
+						lines[i] = "DIR=" + dest
+						body = strings.Join(lines, "\n")
+						break
+					}
+				}
+			}
+			return os.WriteFile(dst, []byte(body), 0755)
+		}
 	}
 	out := "#!/bin/sh\nDIR=" + dest + "\n" +
 		"export LD_LIBRARY_PATH=\"$DIR/lib:${LD_LIBRARY_PATH:-}\"\n"
 	if fileExists(filepath.Join(dest, "lib", "ld-musl-aarch64.so.1")) {
 		out += "exec \"$DIR/lib/ld-musl-aarch64.so.1\" \"$DIR/" + relBin + "\" \"$@\"\n"
+	} else if fileExists(filepath.Join(dest, "ld-musl-aarch64.so.1")) {
+		out += "export LD_LIBRARY_PATH=\"$DIR:${LD_LIBRARY_PATH:-}\"\n" +
+			"exec \"$DIR/ld-musl-aarch64.so.1\" \"$DIR/" + relBin + "\" \"$@\"\n"
 	} else {
 		out += "exec \"$DIR/" + relBin + "\" \"$@\"\n"
 	}
