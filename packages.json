@@ -548,8 +548,9 @@
       "bin": "rclone",
       "dest": "/data/local/opt/rclone",
       "check": "/data/local/opt/rclone/bin/rclone",
-      "md5": "332046f69a0d49366e18199512ba749f",
-      "size": 84699648
+      "md5": "bdea19bcae865b9196a2f4b3be353dc2",
+      "size": 84699648,
+      "url": "https://github.com/initialfox/yandex-station-repo/releases/download/apkg-files/rclone.tar"
     },
     {
       "name": "ripgrep",
