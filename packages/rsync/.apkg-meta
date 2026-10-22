@@ -1,0 +1,7 @@
+version=3.4.3
+category=net
+kind=dir
+dest=/data/local/opt/rsync
+check=/data/local/opt/rsync/bin/rsync
+description=Синхронизация файлов
+bin=rsync
