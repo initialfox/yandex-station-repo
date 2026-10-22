@@ -1,0 +1,7 @@
+version=0.54.0
+category=util
+kind=dir
+dest=/data/local/opt/fzf
+check=/data/local/opt/fzf/bin/fzf
+description=Fuzzy finder
+bin=fzf
