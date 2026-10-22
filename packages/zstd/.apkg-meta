@@ -1,0 +1,7 @@
+version=1.5.6
+category=util
+kind=dir
+dest=/data/local/opt/zstd
+check=/data/local/opt/zstd/bin/zstd
+description=Сжатие Zstandard
+bin=zstd
