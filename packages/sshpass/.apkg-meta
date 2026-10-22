@@ -1,0 +1,7 @@
+version=1.10
+category=net
+kind=dir
+dest=/data/local/opt/sshpass
+check=/data/local/opt/sshpass/bin/sshpass
+description=SSH с паролем в CLI
+bin=sshpass
