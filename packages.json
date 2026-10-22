@@ -159,6 +159,34 @@
       "size": 1982976
     },
     {
+      "name": "dust",
+      "version": "1.0.0",
+      "arch": "aarch64",
+      "description": "du с деревом",
+      "category": "util",
+      "kind": "dir",
+      "asset": "dust.tar",
+      "bin": "dust",
+      "dest": "/data/local/opt/dust",
+      "check": "/data/local/opt/dust/bin/dust",
+      "md5": "e397e0a605184f52afa5c5e2301a2886",
+      "size": 2712576
+    },
+    {
+      "name": "eza",
+      "version": "0.18.16",
+      "arch": "aarch64",
+      "description": "Современный ls",
+      "category": "util",
+      "kind": "dir",
+      "asset": "eza.tar",
+      "bin": "eza",
+      "dest": "/data/local/opt/eza",
+      "check": "/data/local/opt/eza/bin/eza",
+      "md5": "26510e5d0c30475699c32549b631dcd4",
+      "size": 11772416
+    },
+    {
       "name": "fastfetch",
       "version": "2.70.0",
       "arch": "aarch64",
