@@ -1,0 +1,7 @@
+version=3.3.0
+category=system
+kind=dir
+dest=/data/local/opt/htop
+check=/data/local/opt/htop/bin/htop
+description=Интерактивный top
+bin=htop

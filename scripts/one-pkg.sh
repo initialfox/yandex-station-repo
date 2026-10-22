@@ -46,12 +46,25 @@ OUT=$(ssh_st "/system/bin/sh -c '
   RUN=./$NAME/${NAME}-run
   OV=/data/local/tmp/apkg-ov.txt
   ok=0
-  # короткие флаги; lsof: -v, strace: -V; --version у части утилит может висеть
-  \$RUN -V >\$OV 2>&1 || \$RUN -v >\$OV 2>&1 || \$RUN -h >\$OV 2>&1 || \$RUN --version >\$OV 2>&1 || \$RUN >\$OV 2>&1 || true
-  if grep -qiE \"Error loading shared library|cannot open shared object\" \$OV; then
-    ok=0
-  elif grep -qiE \"[0-9]+\\.[0-9]+|[0-9]{2,}|usage|Usage|option|Syntax|Copyright|comes with|socat\" \$OV; then
-    ok=1
+  # пробуем несколько флагов; не останавливаемся на exit0 с «unrecognized option»
+  : >\$OV
+  for flg in -V -v --version -h; do
+    \$RUN \$flg >\$OV 2>&1 || true
+    if grep -qiE \"Error loading shared library|cannot open shared object\" \$OV; then
+      ok=0; break
+    fi
+    if grep -qiE \"unrecognized option|invalid option|unknown option\" \$OV; then
+      continue
+    fi
+    if grep -qiE \"[0-9]+\\.[0-9]+|[0-9]{2,}|usage|Usage|Syntax|Copyright|comes with|socat\" \$OV; then
+      ok=1; break
+    fi
+  done
+  if [ \$ok = 0 ] && [ -x ./$NAME/bin/$BIN ]; then
+    # бинарь на месте и loader не ругался — ок для TUI (htop/screen)
+    if ! grep -qiE \"Error loading shared library|cannot open shared object\" \$OV; then
+      ok=1
+    fi
   fi
   dd if=\$OV bs=240 count=1 2>/dev/null; echo
   rm -rf $NAME ${NAME}-one.tar \$OV
