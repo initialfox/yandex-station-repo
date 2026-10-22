@@ -145,6 +145,20 @@
       "size": 2097152
     },
     {
+      "name": "htop",
+      "version": "3.3.0",
+      "arch": "aarch64",
+      "description": "Интерактивный top",
+      "category": "system",
+      "kind": "dir",
+      "asset": "htop.tar",
+      "bin": "htop",
+      "dest": "/data/local/opt/htop",
+      "check": "/data/local/opt/htop/bin/htop",
+      "md5": "47702549d06e327fe740addda53b033d",
+      "size": 2058752
+    },
+    {
       "name": "iperf3",
       "version": "3.17.1",
       "arch": "aarch64",
@@ -297,6 +311,20 @@
       "check": "/data/local/opt/pv/bin/pv",
       "md5": "d924b8d7db4a60eadce2eef12c056bfb",
       "size": 876544
+    },
+    {
+      "name": "rsync",
+      "version": "3.4.3",
+      "arch": "aarch64",
+      "description": "Синхронизация файлов",
+      "category": "net",
+      "kind": "dir",
+      "asset": "rsync.tar",
+      "bin": "rsync",
+      "dest": "/data/local/opt/rsync",
+      "check": "/data/local/opt/rsync/bin/rsync",
+      "md5": "4143b26f1eb48769abad8fc9a33391f9",
+      "size": 3487232
     },
     {
       "name": "screen",
