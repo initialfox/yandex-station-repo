@@ -229,6 +229,20 @@
       "size": 4205568
     },
     {
+      "name": "ncdu",
+      "version": "1.20",
+      "arch": "aarch64",
+      "description": "Анализ диска",
+      "category": "util",
+      "kind": "dir",
+      "asset": "ncdu.tar",
+      "bin": "ncdu",
+      "dest": "/data/local/opt/ncdu",
+      "check": "/data/local/opt/ncdu/bin/ncdu",
+      "md5": "5e684fdfcb098eeaa773e8819de59986",
+      "size": 1858048
+    },
+    {
       "name": "neofetch",
       "version": "7.1.0",
       "arch": "aarch64",
