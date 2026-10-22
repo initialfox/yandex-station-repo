@@ -24,7 +24,7 @@ const (
 	defaultIndexURL = "https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json"
 	// пакеты лежат на ветке pkg (raw), не в Releases
 	defaultBaseURL = "https://raw.githubusercontent.com/initialfox/yandex-station-repo/pkg"
-	version        = "1.0.6"
+	version        = "1.0.7"
 )
 
 // только GitHub raw
@@ -629,22 +629,32 @@ func installOne(repo *repoMeta, p pkgMeta) error {
 					return err
 				}
 			} else {
-				cand := filepath.Join(stage, bin)
-				if _, err := os.Stat(cand); err != nil {
-					cand = filepath.Join(stage, p.Name, bin)
+				// tar = name/name (файл). stage/name часто ДИРЕКТОРИЯ — не брать её как бинарь
+				cand := ""
+				for _, c := range []string{
+					filepath.Join(stage, p.Name, bin),
+					filepath.Join(stage, bin),
+					filepath.Join(stage, p.Name, p.Name),
+				} {
+					if st, err := os.Stat(c); err == nil && !st.IsDir() {
+						cand = c
+						break
+					}
 				}
-				if _, err := os.Stat(cand); err != nil {
-					// любой исполняемый
+				if cand == "" {
 					_ = filepath.Walk(stage, func(path string, info os.FileInfo, err error) error {
 						if err != nil || info.IsDir() {
 							return nil
 						}
-						if info.Mode()&0111 != 0 || info.Name() == bin {
+						if info.Name() == bin || (info.Mode()&0111 != 0 && info.Name() == p.Name) {
 							cand = path
 							return io.EOF
 						}
 						return nil
 					})
+				}
+				if cand == "" {
+					return fmt.Errorf("в %s не найден бинарь %s", assetName(p), bin)
 				}
 				if err := copyFile(cand, dst); err != nil {
 					return err
