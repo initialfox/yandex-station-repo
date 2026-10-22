@@ -1,0 +1,7 @@
+version=3.0
+category=util
+kind=dir
+dest=/data/local/opt/zip
+check=/data/local/opt/zip/bin/zip
+description=Упаковка ZIP
+bin=zip
