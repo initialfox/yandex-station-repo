@@ -117,7 +117,29 @@ IS_NEW=$(cat /tmp/apkg-is-new)
 python3 - "$NAME" "$VER" <<'PY'
 import base64, json, os, sys, urllib.request, ssl
 name, ver = sys.argv[1], sys.argv[2]
-token = os.popen("gh auth token").read().strip()
+def github_token():
+    for cmd in (
+        "gh auth token",
+        "printf 'protocol=https\\nhost=github.com\\n\\n' | git credential fill",
+    ):
+        out = os.popen(cmd).read()
+        if cmd.startswith("printf"):
+            for line in out.splitlines():
+                if line.startswith("password="):
+                    t = line.split("=", 1)[1].strip()
+                    if t:
+                        return t
+        else:
+            t = out.strip()
+            if t and "not logged" not in t.lower():
+                return t
+    for k in ("GH_TOKEN", "GITHUB_TOKEN"):
+        t = os.environ.get(k, "").strip()
+        if t:
+            return t
+    raise SystemExit("no github token (gh auth / git credential / GH_TOKEN)")
+
+token = github_token()
 repo = "initialfox/yandex-station-repo"
 ctx = ssl.create_default_context()
 

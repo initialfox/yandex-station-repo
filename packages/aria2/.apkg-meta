@@ -1,0 +1,7 @@
+version=1.37.0
+category=net
+kind=dir
+dest=/data/local/opt/aria2
+check=/data/local/opt/aria2/bin/aria2c
+description=Многопоточная закачка
+bin=aria2c
