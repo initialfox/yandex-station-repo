@@ -299,6 +299,20 @@
       "size": 873984
     },
     {
+      "name": "unzip",
+      "version": "6.0",
+      "arch": "aarch64",
+      "description": "Распаковка ZIP",
+      "category": "util",
+      "kind": "dir",
+      "asset": "unzip.tar",
+      "bin": "unzip",
+      "dest": "/data/local/opt/unzip",
+      "check": "/data/local/opt/unzip/bin/unzip",
+      "md5": "d17cc9d1c04ac185fde243ed18dc8a39",
+      "size": 1138176
+    },
+    {
       "name": "wireguard",
       "version": "1.0.0",
       "arch": "aarch64",
