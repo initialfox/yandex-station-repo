@@ -201,6 +201,20 @@
       "size": 8159744
     },
     {
+      "name": "socat",
+      "version": "1.8.0",
+      "arch": "aarch64",
+      "description": "Мультиплексный relay TCP/UDP/UNIX",
+      "category": "net",
+      "kind": "dir",
+      "asset": "socat.tar",
+      "bin": "socat",
+      "dest": "/data/local/opt/socat",
+      "check": "/data/local/opt/socat/bin/socat",
+      "md5": "42c15b550329c7893f989bb2011b1fa6",
+      "size": 2561024
+    },
+    {
       "name": "sqlite",
       "version": "3.45.3",
       "arch": "aarch64",
