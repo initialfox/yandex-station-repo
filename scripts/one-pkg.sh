@@ -46,8 +46,8 @@ OUT=$(ssh_st "/system/bin/sh -c '
   RUN=./$NAME/${NAME}-run
   OV=/data/local/tmp/apkg-ov.txt
   ok=0
-  # сначала короткие флаги (-V/-h), --version у некоторых утилит странно себя ведёт
-  \$RUN -V >\$OV 2>&1 || \$RUN --version >\$OV 2>&1 || \$RUN -h >\$OV 2>&1 || \$RUN >\$OV 2>&1 || true
+  # короткие флаги; lsof: -v, strace: -V; --version у части утилит может висеть
+  \$RUN -V >\$OV 2>&1 || \$RUN -v >\$OV 2>&1 || \$RUN -h >\$OV 2>&1 || \$RUN --version >\$OV 2>&1 || \$RUN >\$OV 2>&1 || true
   if grep -qiE \"Error loading shared library|cannot open shared object\" \$OV; then
     ok=0
   elif grep -qiE \"[0-9]+\\.[0-9]+|[0-9]{2,}|usage|Usage|option|Syntax|Copyright|comes with|socat\" \$OV; then

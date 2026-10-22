@@ -1,0 +1,7 @@
+version=1.20
+category=util
+kind=dir
+dest=/data/local/opt/ncdu
+check=/data/local/opt/ncdu/bin/ncdu
+description=Анализ диска
+bin=ncdu
