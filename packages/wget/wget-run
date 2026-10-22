@@ -1,0 +1,15 @@
+#!/bin/sh
+DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+export LD_LIBRARY_PATH="$DIR/lib:${LD_LIBRARY_PATH:-}"
+if [ -d "$DIR/share/terminfo" ]; then
+  export TERMINFO="$DIR/share/terminfo"
+fi
+if [ -d "$DIR/libexec/git-core" ]; then
+  export GIT_EXEC_PATH="$DIR/libexec/git-core"
+fi
+BIN="$DIR/bin/wget"
+if [ ! -x "$BIN" ]; then
+  echo "wget: missing $BIN" >&2
+  exit 127
+fi
+exec "$DIR/lib/ld-musl-aarch64.so.1" "$BIN" "$@"

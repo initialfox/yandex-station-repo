@@ -1,0 +1,7 @@
+version=1.24.5
+category=net
+kind=dir
+dest=/data/local/opt/wget
+check=/data/local/opt/wget/bin/wget
+description=HTTP/FTP загрузчик
+bin=wget
