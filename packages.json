@@ -380,7 +380,8 @@
       "dest": "/data/local/opt/node",
       "check": "/data/local/opt/node/bin/node",
       "md5": "28225e20c82e78075012a62d7f94dd44",
-      "size": 67896832
+      "size": 67896832,
+      "url": "https://github.com/initialfox/yandex-station-repo/releases/download/apkg-files/node.tar"
     },
     {
       "name": "openssl",
