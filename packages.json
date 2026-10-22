@@ -173,6 +173,20 @@
       "size": 1076736
     },
     {
+      "name": "fzf",
+      "version": "0.54.0",
+      "arch": "aarch64",
+      "description": "Fuzzy finder",
+      "category": "util",
+      "kind": "dir",
+      "asset": "fzf.tar",
+      "bin": "fzf",
+      "dest": "/data/local/opt/fzf",
+      "check": "/data/local/opt/fzf/bin/fzf",
+      "md5": "1892fd4e7b2086c02a48a69c977ea85b",
+      "size": 4912640
+    },
+    {
       "name": "gawk",
       "version": "5.3.0",
       "arch": "aarch64",
