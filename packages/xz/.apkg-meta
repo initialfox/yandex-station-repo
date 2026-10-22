@@ -1,0 +1,7 @@
+version=5.6.2
+category=util
+kind=dir
+dest=/data/local/opt/xz
+check=/data/local/opt/xz/bin/xz
+description=Сжатие XZ/LZMA
+bin=xz
