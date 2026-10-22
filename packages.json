@@ -166,8 +166,8 @@
       "bin": "openvpn",
       "dest": "/data/local/opt/openvpn",
       "check": "/data/local/opt/openvpn/bin/openvpn",
-      "md5": "c1009cdb2d1a9ca93293d643776b7403",
-      "size": 8152064
+      "md5": "9328728f321f2a224f2e8436cb8985b4",
+      "size": 8159744
     },
     {
       "name": "sqlite",
