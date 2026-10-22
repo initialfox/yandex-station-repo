@@ -19,6 +19,20 @@
       "size": 6296064
     },
     {
+      "name": "aria2",
+      "version": "1.37.0",
+      "arch": "aarch64",
+      "description": "Многопоточная закачка",
+      "category": "net",
+      "kind": "dir",
+      "asset": "aria2.tar",
+      "bin": "aria2c",
+      "dest": "/data/local/opt/aria2",
+      "check": "/data/local/opt/aria2/bin/aria2c",
+      "md5": "6a800c5c2aefe820cc29b2b3151d1d10",
+      "size": 31296512
+    },
+    {
       "name": "bash",
       "version": "5.2.26",
       "arch": "aarch64",
