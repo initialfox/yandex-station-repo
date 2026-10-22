@@ -7,7 +7,7 @@
   "packages": [
     {
       "name": "apkg",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "arch": "aarch64",
       "description": "Пакетный менеджер Alice",
       "category": "system",
@@ -15,8 +15,8 @@
       "asset": "apkg.tar",
       "bin": "apkg",
       "check": "/data/local/bin/apkg",
-      "md5": "32f5227e0d016e7353751e29d588cd1e",
-      "size": 6296064
+      "md5": "63456b2c0c1ac7331650295bf56adcda",
+      "size": 9308160
     },
     {
       "name": "aria2",
