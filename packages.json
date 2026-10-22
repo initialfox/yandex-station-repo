@@ -567,6 +567,20 @@
       "url": "https://github.com/initialfox/yandex-station-repo/releases/download/apkg-files/rclone.tar"
     },
     {
+      "name": "restic",
+      "version": "0.16.4",
+      "arch": "aarch64",
+      "description": "Бэкапы restic",
+      "category": "util",
+      "kind": "dir",
+      "asset": "restic.tar",
+      "bin": "restic",
+      "dest": "/data/local/opt/restic",
+      "check": "/data/local/opt/restic/bin/restic",
+      "md5": "0024837dd690673c445bcdc964cdf5ce",
+      "size": 27264512
+    },
+    {
       "name": "ripgrep",
       "version": "14.1.0",
       "arch": "aarch64",
