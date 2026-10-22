@@ -18,13 +18,13 @@ dist.mkdir(exist_ok=True)
 
 # meta hints from existing fields / defaults
 META = {
-  "zsh": ("5.9.2", "shell", "file", "", "/data/local/bin/zsh", "Z shell (static musl)"),
-  "fastfetch": ("2.70.0", "system", "file", "", "/data/local/bin/fastfetch", "Системная информация"),
+  "zsh": ("5.9.2", "shell", "dir", "/data/local/opt/zsh", "/data/local/opt/zsh/zsh", "Z shell (static musl)"),
+  "fastfetch": ("2.70.0", "system", "dir", "/data/local/opt/fastfetch", "/data/local/opt/fastfetch/fastfetch", "Системная информация"),
   "dropbear": ("2022.82", "net", "dir", "/data/dropbear", "/data/dropbear/dropbear", "SSH server"),
   "curl": ("8.14.1", "net", "dir", "/data/local/opt/curl", "/data/local/opt/curl/bin/curl", "HTTP клиент + CA"),
-  "miniserve": ("0.29.0", "net", "file", "", "/data/local/bin/miniserve", "HTTP file server"),
+  "miniserve": ("0.29.0", "net", "dir", "/data/local/opt/miniserve", "/data/local/opt/miniserve/miniserve", "HTTP file server"),
   "btop": ("1.4.7", "system", "dir", "/data/local/opt/btop", "/data/local/opt/btop/bin/btop", "Мониторинг (tty)"),
-  "ffmpeg": ("7.0.2", "media", "file", "", "/data/local/bin/ffmpeg", "Медиаконвертер"),
+  "ffmpeg": ("7.0.2", "media", "dir", "/data/local/opt/ffmpeg", "/data/local/opt/ffmpeg/ffmpeg", "Медиаконвертер"),
   "nano": ("8.0", "editors", "dir", "/data/local/opt/nano", "/data/local/opt/nano/bin/nano", "Текстовый редактор"),
   "iperf3": ("3.17.1", "net", "dir", "/data/local/opt/iperf3", "/data/local/opt/iperf3/bin/iperf3", "Bandwidth test"),
   "tcpdump": ("4.99.4", "net", "dir", "/data/local/opt/tcpdump", "/data/local/opt/tcpdump/bin/tcpdump", "Сниффер"),
