@@ -1,0 +1,7 @@
+version=643
+category=util
+kind=dir
+dest=/data/local/opt/less
+check=/data/local/opt/less/bin/less
+description=Пейджер
+bin=less
