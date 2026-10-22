@@ -103,6 +103,20 @@
       "size": 51138560
     },
     {
+      "name": "file",
+      "version": "5.45",
+      "arch": "aarch64",
+      "description": "Определение типа файла",
+      "category": "util",
+      "kind": "dir",
+      "asset": "file.tar",
+      "bin": "file",
+      "dest": "/data/local/opt/file",
+      "check": "/data/local/opt/file/bin/file",
+      "md5": "8bfd3dca0909926d0df0aaf826f7f22a",
+      "size": 1076736
+    },
+    {
       "name": "iperf3",
       "version": "3.17.1",
       "arch": "aarch64",
