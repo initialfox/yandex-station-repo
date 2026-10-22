@@ -201,6 +201,20 @@
       "size": 8159744
     },
     {
+      "name": "pv",
+      "version": "1.8.5",
+      "arch": "aarch64",
+      "description": "Pipe viewer",
+      "category": "util",
+      "kind": "dir",
+      "asset": "pv.tar",
+      "bin": "pv",
+      "dest": "/data/local/opt/pv",
+      "check": "/data/local/opt/pv/bin/pv",
+      "md5": "d924b8d7db4a60eadce2eef12c056bfb",
+      "size": 876544
+    },
+    {
       "name": "socat",
       "version": "1.8.0",
       "arch": "aarch64",
