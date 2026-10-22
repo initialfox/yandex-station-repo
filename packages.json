@@ -566,6 +566,20 @@
       "size": 8159744
     },
     {
+      "name": "patch",
+      "version": "2.7.6",
+      "arch": "aarch64",
+      "description": "GNU patch",
+      "category": "dev",
+      "kind": "dir",
+      "asset": "patch.tar",
+      "bin": "patch",
+      "dest": "/data/local/opt/patch",
+      "check": "/data/local/opt/patch/bin/patch",
+      "md5": "7eb6826a510b421547ed812152e59344",
+      "size": 938496
+    },
+    {
       "name": "pip",
       "version": "24.0",
       "arch": "aarch64",
