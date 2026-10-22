@@ -397,6 +397,20 @@
       "size": 876544
     },
     {
+      "name": "ripgrep",
+      "version": "14.1.0",
+      "arch": "aarch64",
+      "description": "Быстрый поиск по коду",
+      "category": "util",
+      "kind": "dir",
+      "asset": "ripgrep.tar",
+      "bin": "rg",
+      "dest": "/data/local/opt/ripgrep",
+      "check": "/data/local/opt/ripgrep/bin/rg",
+      "md5": "600380047fc2b31c236b6857f0ed7fd1",
+      "size": 5873152
+    },
+    {
       "name": "rsync",
       "version": "3.4.3",
       "arch": "aarch64",
