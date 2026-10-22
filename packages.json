@@ -299,6 +299,20 @@
       "size": 876544
     },
     {
+      "name": "screen",
+      "version": "4.9.1",
+      "arch": "aarch64",
+      "description": "Terminal multiplexer",
+      "category": "shell",
+      "kind": "dir",
+      "asset": "screen.tar",
+      "bin": "screen",
+      "dest": "/data/local/opt/screen",
+      "check": "/data/local/opt/screen/bin/screen",
+      "md5": "115c3d966daf7424138bf366926226f2",
+      "size": 2941440
+    },
+    {
       "name": "socat",
       "version": "1.8.0",
       "arch": "aarch64",
