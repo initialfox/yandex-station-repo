@@ -1,0 +1,7 @@
+version=1.8.0
+category=net
+kind=dir
+dest=/data/local/opt/socat
+check=/data/local/opt/socat/bin/socat
+description=Мультиплексный relay TCP/UDP/UNIX
+bin=socat

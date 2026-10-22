@@ -221,37 +221,78 @@ cp -a "$LOADER" "$OUT/lib/"
 find "$WORK/root" -name 'libc.musl-aarch64.so.1' -exec cp -a {} "$OUT/lib/" \;
 ln -sfn ld-musl-aarch64.so.1 "$OUT/lib/libc.so" 2>/dev/null || true
 
-# all shared libs
-find "$WORK/root" -type f -name '*.so*' | while read -r f; do
+# all shared libs — symlink'и Alpine часто ../../lib/foo.so → копируем РЕАЛЬНЫЙ файл под SONAME
+copy_lib() {
+  local f="$1" base real
   base=$(basename "$f")
-  [[ "$base" == ld-musl-aarch64.so.1 ]] && continue
-  cp -a "$f" "$OUT/lib/" 2>/dev/null || true
-done
-# recreate SONAME symlinks that apk had as symlinks
-find "$WORK/root" -type l -name '*.so*' | while read -r l; do
-  base=$(basename "$l")
-  tgt=$(readlink "$l")
-  ln -sfn "$tgt" "$OUT/lib/$base" 2>/dev/null || true
-done
+  case "$base" in
+    ld-musl-aarch64.so.1) return 0 ;;
+    # openssl engines — не нужны CLI, раздувают бандл
+    afalg.so|capi.so|padlock.so|legacy.so|loader_attic.so) return 0 ;;
+  esac
+  if [[ -L "$f" ]]; then
+    real=$(readlink -f "$f" 2>/dev/null || true)
+    if [[ -z "$real" || ! -f "$real" ]]; then
+      # macOS: нет readlink -f
+      real=$(python3 -c "import os; print(os.path.realpath('$f'))" 2>/dev/null || true)
+    fi
+    if [[ -n "$real" && -f "$real" ]]; then
+      cp -a "$real" "$OUT/lib/$base"
+      return 0
+    fi
+    return 0
+  fi
+  [[ -f "$f" ]] && cp -a "$f" "$OUT/lib/$base"
+}
+while IFS= read -r f; do
+  copy_lib "$f"
+done < <(find "$WORK/root" \( -type f -o -type l \) -name '*.so*' 2>/dev/null || true)
 
 # binaries: prefer usr/bin, bin, sbin
+# (не pipefail+head: find по несуществующим path даёт exit 1)
+find_bin() {
+  local b="$1"
+  local d f
+  for d in "$WORK/root/usr/bin" "$WORK/root/bin" "$WORK/root/usr/sbin" "$WORK/root/sbin"; do
+    [[ -d "$d" ]] || continue
+    # файл или symlink (socat → socat1 и т.п.)
+    if [[ -e "$d/$b" && -x "$d/$b" ]]; then
+      echo "$d/$b"
+      return 0
+    fi
+    f=$(find "$d" \( -type f -o -type l \) -name "$b" 2>/dev/null | head -1 || true)
+    [[ -n "$f" ]] && { echo "$f"; return 0; }
+  done
+  return 1
+}
+
 copy_bin() {
   local b="$1"
-  local f
-  f=$(find "$WORK/root/usr/bin" "$WORK/root/bin" "$WORK/root/usr/sbin" "$WORK/root/sbin" -type f -name "$b" 2>/dev/null | head -1)
-  [[ -n "$f" ]] || return 1
-  cp -a "$f" "$OUT/bin/$b"
+  local f real
+  f=$(find_bin "$b") || return 1
+  # разыменовать symlink → копируем реальный бинарь под именем b
+  if [[ -L "$f" ]]; then
+    real=$(readlink -f "$f" 2>/dev/null || readlink "$f")
+    [[ "$real" != /* ]] && real="$(dirname "$f")/$real"
+    cp -a "$real" "$OUT/bin/$b"
+  else
+    cp -a "$f" "$OUT/bin/$b"
+  fi
   chmod +x "$OUT/bin/$b"
 }
 
 # primary + common helpers for multi-bin packages
-copy_bin "$BIN" || {
-  # fallback: first executable in usr/bin matching name*
-  f=$(find "$WORK/root/usr/bin" "$WORK/root/bin" -type f -perm -111 2>/dev/null | head -1)
-  [[ -n "$f" ]] || { echo "binary $BIN not found" >&2; exit 1; }
+if ! copy_bin "$BIN"; then
+  f=""
+  for d in "$WORK/root/usr/bin" "$WORK/root/bin"; do
+    [[ -d "$d" ]] || continue
+    f=$(find "$d" -type f -perm -111 2>/dev/null | head -1 || true)
+    [[ -n "$f" ]] && break
+  done
+  [[ -n "$f" ]] || { echo "binary $BIN not found in $WORK/root" >&2; find "$WORK/root" -type f -perm -111 2>/dev/null | head -20 >&2; exit 1; }
   cp -a "$f" "$OUT/bin/$(basename "$f")"
   BIN=$(basename "$f")
-}
+fi
 
 # extra bins for known packages
 case "$NAME" in
@@ -310,15 +351,19 @@ case "$NAME" in
     ;;
 esac
 
-# terminfo for ncurses apps
-if [[ -d "$WORK/root/usr/share/terminfo" ]]; then
-  mkdir -p "$OUT/share"
-  cp -a "$WORK/root/usr/share/terminfo" "$OUT/share/" 2>/dev/null || true
-fi
-if [[ -d "$WORK/root/etc/terminfo" ]]; then
-  mkdir -p "$OUT/share"
-  cp -a "$WORK/root/etc/terminfo" "$OUT/share/" 2>/dev/null || true
-fi
+# terminfo только для TUI
+case "$NAME" in
+  tmux|htop|ncdu|less|nano|bash|screen|fzf)
+    if [[ -d "$WORK/root/usr/share/terminfo" ]]; then
+      mkdir -p "$OUT/share"
+      cp -a "$WORK/root/usr/share/terminfo" "$OUT/share/" 2>/dev/null || true
+    fi
+    if [[ -d "$WORK/root/etc/terminfo" ]]; then
+      mkdir -p "$OUT/share"
+      cp -a "$WORK/root/etc/terminfo" "$OUT/share/" 2>/dev/null || true
+    fi
+    ;;
+esac
 
 # portable wrapper
 cat > "$OUT/${NAME}-run" <<EOF
