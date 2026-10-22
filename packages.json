@@ -313,6 +313,20 @@
       "size": 2058752
     },
     {
+      "name": "hyperfine",
+      "version": "1.18.0",
+      "arch": "aarch64",
+      "description": "Бенчмарк CLI",
+      "category": "util",
+      "kind": "dir",
+      "asset": "hyperfine.tar",
+      "bin": "hyperfine",
+      "dest": "/data/local/opt/hyperfine",
+      "check": "/data/local/opt/hyperfine/bin/hyperfine",
+      "md5": "21d05f3955b0e7af8f4784f37a6204e7",
+      "size": 1664512
+    },
+    {
       "name": "iperf3",
       "version": "3.17.1",
       "arch": "aarch64",
@@ -829,7 +843,7 @@
       "bin": "xh",
       "dest": "/data/local/opt/xh",
       "check": "/data/local/opt/xh/bin/xh",
-      "md5": "18a3727fac4f7adc0973d2ce8c943417",
+      "md5": "50d971d97b0cd21989864abb07ad0e00",
       "size": 10734592
     },
     {
