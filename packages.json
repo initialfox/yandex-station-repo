@@ -299,6 +299,20 @@
       "size": 1005056
     },
     {
+      "name": "make",
+      "version": "4.4.1",
+      "arch": "aarch64",
+      "description": "GNU Make",
+      "category": "dev",
+      "kind": "dir",
+      "asset": "make.tar",
+      "bin": "make",
+      "dest": "/data/local/opt/make",
+      "check": "/data/local/opt/make/bin/make",
+      "md5": "91ce0f2c92f90f27211a9f147ff34978",
+      "size": 1009152
+    },
+    {
       "name": "micro",
       "version": "2.0.13",
       "arch": "aarch64",
