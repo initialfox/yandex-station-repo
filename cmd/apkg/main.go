@@ -376,13 +376,17 @@ func installOne(repo *repoMeta, p pkgMeta) error {
 		wrap := ensureMuslWrapper(dest, bin, p)
 		dst := filepath.Join(bindir(), bin)
 		_ = os.MkdirAll(bindir(), 0755)
-		if err := copyFile(wrap, dst); err != nil {
-			return err
+		// symlink → обёртка в opt: dirname($0) = пакет (важно для gen2 /bkupgrade/data)
+		_ = os.Remove(dst)
+		if err := os.Symlink(wrap, dst); err != nil {
+			// fallback: copy, но переписать DIR на абсолютный dest
+			if err2 := writeBoundWrapper(wrap, dest, bin, dst); err2 != nil {
+				return err2
+			}
 		}
-		_ = os.Chmod(dst, 0755)
 		tryXbin(dst, bin)
 		if p.Runtime == "musl" || fileExists(filepath.Join(dest, "lib", "ld-musl-aarch64.so.1")) {
-			fmt.Printf("  (musl-бандл: не запускай %s/bin/%s напрямую)\n", dest, bin)
+			fmt.Printf("  (musl: запускай «%s», не %s/bin/%s)\n", bin, dest, bin)
 		}
 	default: // file — один статический бинарь
 		_ = os.MkdirAll(bindir(), 0755)
@@ -641,7 +645,7 @@ func chmodTree(root string) {
 	})
 }
 
-// ensureMuslWrapper — в PATH только обёртка с ld-musl, никогда голый ELF.
+// ensureMuslWrapper — в PATH только обёртка; #!/bin/sh + DIR=dirname (gen1 и gen2).
 func ensureMuslWrapper(dest, bin string, p pkgMeta) string {
 	for _, name := range []string{bin + "-run", p.Name + "-run", bin + "-ssh", "run.sh"} {
 		cand := filepath.Join(dest, name)
@@ -649,26 +653,47 @@ func ensureMuslWrapper(dest, bin string, p pkgMeta) string {
 			return cand
 		}
 	}
-	loader := filepath.Join(dest, "lib", "ld-musl-aarch64.so.1")
-	target := filepath.Join(dest, "bin", bin)
-	if !fileExists(target) {
-		target = filepath.Join(dest, bin)
+	relBin := "bin/" + bin
+	if !fileExists(filepath.Join(dest, "bin", bin)) && fileExists(filepath.Join(dest, bin)) {
+		relBin = bin
 	}
 	wrap := filepath.Join(dest, bin+"-run")
-	body := "#!/system/bin/sh\nDIR=" + dest + "\n" +
-		"export LD_LIBRARY_PATH=\"$DIR/lib:${LD_LIBRARY_PATH}\"\n"
-	if fileExists(loader) {
-		body += "exec \"$DIR/lib/ld-musl-aarch64.so.1\" \"$DIR/bin/" + bin + "\" \"$@\"\n"
-		// fix path if bin not under bin/
-		if !fileExists(filepath.Join(dest, "bin", bin)) && fileExists(filepath.Join(dest, bin)) {
-			body = "#!/system/bin/sh\nDIR=" + dest + "\n" +
-				"export LD_LIBRARY_PATH=\"$DIR/lib:${LD_LIBRARY_PATH}\"\n" +
-				"exec \"$DIR/lib/ld-musl-aarch64.so.1\" \"$DIR/" + bin + "\" \"$@\"\n"
-		}
+	body := "#!/bin/sh\n" +
+		"DIR=$(CDPATH= cd -- \"$(dirname \"$0\")\" && pwd)\n" +
+		"export LD_LIBRARY_PATH=\"$DIR/lib:${LD_LIBRARY_PATH:-}\"\n"
+	if fileExists(filepath.Join(dest, "lib", "ld-musl-aarch64.so.1")) {
+		body += "exec \"$DIR/lib/ld-musl-aarch64.so.1\" \"$DIR/" + relBin + "\" \"$@\"\n"
+	} else if fileExists(filepath.Join(dest, "ld-musl-aarch64.so.1")) {
+		body += "export LD_LIBRARY_PATH=\"$DIR:${LD_LIBRARY_PATH:-}\"\n" +
+			"exec \"$DIR/ld-musl-aarch64.so.1\" \"$DIR/" + relBin + "\" \"$@\"\n"
 	} else {
-		body += "exec \"$DIR/bin/" + bin + "\" \"$@\"\n"
+		body += "exec \"$DIR/" + relBin + "\" \"$@\"\n"
 	}
 	_ = os.WriteFile(wrap, []byte(body), 0755)
-	_ = target
 	return wrap
+}
+
+// writeBoundWrapper — если symlink нельзя: копия с абсолютным DIR=dest.
+func writeBoundWrapper(srcWrap, dest, bin, dst string) error {
+	b, err := os.ReadFile(srcWrap)
+	if err != nil {
+		b = nil
+	}
+	body := string(b)
+	if !strings.Contains(body, "dirname") && !strings.Contains(body, "DIR=") {
+		body = ""
+	}
+	// всегда пишем портативный с абсолютным DIR на случай copy в bindir
+	relBin := "bin/" + bin
+	if !fileExists(filepath.Join(dest, "bin", bin)) && fileExists(filepath.Join(dest, bin)) {
+		relBin = bin
+	}
+	out := "#!/bin/sh\nDIR=" + dest + "\n" +
+		"export LD_LIBRARY_PATH=\"$DIR/lib:${LD_LIBRARY_PATH:-}\"\n"
+	if fileExists(filepath.Join(dest, "lib", "ld-musl-aarch64.so.1")) {
+		out += "exec \"$DIR/lib/ld-musl-aarch64.so.1\" \"$DIR/" + relBin + "\" \"$@\"\n"
+	} else {
+		out += "exec \"$DIR/" + relBin + "\" \"$@\"\n"
+	}
+	return os.WriteFile(dst, []byte(out), 0755)
 }

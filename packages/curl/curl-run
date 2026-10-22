@@ -1,5 +1,6 @@
-#!/system/bin/sh
-DIR=/data/local/opt/curl
+#!/bin/sh
+# portable wrapper — works on Station 1 (/data) and gen2 (/bkupgrade/data, /bin/sh)
+DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 export CURL_CA_BUNDLE="${CURL_CA_BUNDLE:-$DIR/cacert.pem}"
 export SSL_CERT_FILE="${SSL_CERT_FILE:-$DIR/cacert.pem}"
 export SSL_CERT_DIR="${SSL_CERT_DIR:-}"

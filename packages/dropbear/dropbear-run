@@ -1,0 +1,4 @@
+#!/bin/sh
+DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+export LD_LIBRARY_PATH="$DIR:${LD_LIBRARY_PATH:-}"
+exec "$DIR/ld-musl-aarch64.so.1" "$DIR/dropbear" "$@"

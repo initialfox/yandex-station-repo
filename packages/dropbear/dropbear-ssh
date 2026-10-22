@@ -1,3 +1,5 @@
-#!/system/bin/sh
-# launcher: dropbear server (порт задай сам)
-exec /data/dropbear/dropbear "$@"
+#!/bin/sh
+# portable: dirname($0) = package root (apkg symlinks bin → this script)
+DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+export LD_LIBRARY_PATH="$DIR/lib:${LD_LIBRARY_PATH:-}"
+exec "$DIR/ld-musl-aarch64.so.1" "$DIR/dropbear" "$@"

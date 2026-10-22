@@ -1,0 +1,5 @@
+#!/bin/sh
+DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+export LD_LIBRARY_PATH="$DIR/lib:${LD_LIBRARY_PATH:-}"
+export NMAPDIR="$DIR/share/nmap"
+exec "$DIR/lib/ld-musl-aarch64.so.1" "$DIR/bin/nmap" "$@"

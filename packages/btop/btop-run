@@ -1,19 +1,16 @@
-#!/system/bin/sh
-DIR=/data/local/opt/btop
+#!/bin/sh
+DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 export LANG="${LANG:-C.UTF-8}"
 export LC_ALL="${LC_ALL:-C.UTF-8}"
 export LC_CTYPE="${LC_CTYPE:-C.UTF-8}"
 [ -n "$TERM" ] || export TERM=xterm-256color
-case "$TERM" in
-  dumb|unknown|"") export TERM=xterm-256color ;;
-esac
-[ -d /data/.config ] || mkdir -p /data/.config
+case "$TERM" in dumb|unknown|"") export TERM=xterm-256color ;; esac
+[ -d /data/.config ] || mkdir -p /data/.config 2>/dev/null || true
 export HOME="${HOME:-/data}"
 export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-/data/.config}"
 CFGDIR="$XDG_CONFIG_HOME/btop"
-mkdir -p "$CFGDIR"
+mkdir -p "$CFGDIR" 2>/dev/null || true
 if [ ! -f "$CFGDIR/btop.conf" ] && [ -f "$DIR/btop.conf.default" ]; then
-  cp "$DIR/btop.conf.default" "$CFGDIR/btop.conf"
+  cp "$DIR/btop.conf.default" "$CFGDIR/btop.conf" 2>/dev/null || true
 fi
-# truecolor/braille на dropbear/SSH станции рисуют пустые боксы
 exec "$DIR/bin/btop" --force-utf --tty --low-color "$@"
