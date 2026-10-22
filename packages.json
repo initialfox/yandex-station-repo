@@ -159,6 +159,20 @@
       "size": 2022912
     },
     {
+      "name": "less",
+      "version": "643",
+      "arch": "aarch64",
+      "description": "Пейджер",
+      "category": "util",
+      "kind": "dir",
+      "asset": "less.tar",
+      "bin": "less",
+      "dest": "/data/local/opt/less",
+      "check": "/data/local/opt/less/bin/less",
+      "md5": "55314f5e77dd7604cc4a29b3430959e3",
+      "size": 1941504
+    },
+    {
       "name": "miniserve",
       "version": "0.29.0",
       "arch": "aarch64",
