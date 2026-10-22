@@ -777,6 +777,20 @@
       "size": 10270208
     },
     {
+      "name": "tig",
+      "version": "2.5.10",
+      "arch": "aarch64",
+      "description": "TUI для git",
+      "category": "dev",
+      "kind": "dir",
+      "asset": "tig.tar",
+      "bin": "tig",
+      "dest": "/data/local/opt/tig",
+      "check": "/data/local/opt/tig/bin/tig",
+      "md5": "2ded8a50a92cc6327ee1aa594cb3486a",
+      "size": 19685888
+    },
+    {
       "name": "tmux",
       "version": "3.4",
       "arch": "aarch64",
