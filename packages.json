@@ -201,6 +201,20 @@
       "size": 2097152
     },
     {
+      "name": "git",
+      "version": "2.45.2",
+      "arch": "aarch64",
+      "description": "Git VCS",
+      "category": "dev",
+      "kind": "dir",
+      "asset": "git.tar",
+      "bin": "git",
+      "dest": "/data/local/opt/git",
+      "check": "/data/local/opt/git/bin/git",
+      "md5": "3027e10ea8f48a563fdc2301641b6111",
+      "size": 24788992
+    },
+    {
       "name": "htop",
       "version": "3.3.0",
       "arch": "aarch64",
