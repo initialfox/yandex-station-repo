@@ -337,7 +337,7 @@
       "bin": "screen",
       "dest": "/data/local/opt/screen",
       "check": "/data/local/opt/screen/bin/screen",
-      "md5": "115c3d966daf7424138bf366926226f2",
+      "md5": "129f37e05b9d0beb478df652e08c72ac",
       "size": 2941440
     },
     {
