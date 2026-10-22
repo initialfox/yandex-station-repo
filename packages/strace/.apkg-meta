@@ -1,0 +1,7 @@
+version=6.9
+category=debug
+kind=dir
+dest=/data/local/opt/strace
+check=/data/local/opt/strace/bin/strace
+description=Трассировка syscalls
+bin=strace
