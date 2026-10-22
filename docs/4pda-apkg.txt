@@ -1,107 +1,128 @@
 [SIZE=4][B]apkg — пакетный менеджер для Яндекс.Станции[/B][/SIZE]
-[SIZE=2]Android + buildroot · aarch64 · [URL=https://github.com/initialfox/yandex-station-repo]GitHub[/URL][/SIZE]
+[SIZE=2]Android + buildroot · aarch64 · [URL=https://github.com/initialfox/yandex-station-repo]yandex-station-repo[/URL][/SIZE]
 
-[QUOTE]Нужен [B]root[/B] (SSH или ADB).
+[QUOTE]
+Нужен [B]root[/B] (SSH или ADB).
 
-Две версии ОС на колонках:
+Две версии ОС:
 [LIST]
-[*] [B]Android[/B] — /data/local/bin, /data/local/opt
-[*] [B]buildroot[/B] — /usr/local/bin или /opt (часто rootfs [B]read-only[/B] → сначала remount rw)
+[*] [B]Android[/B] — ставит в [CODE]/data/local/bin[/CODE], [CODE]/data/local/opt[/CODE]
+[*] [B]buildroot[/B] — [CODE]/usr/local/bin[/CODE] / [CODE]/opt[/CODE] (часто rootfs [B]read-only[/B] → сначала [CODE]mount -o remount,rw /[/CODE])
 [/LIST]
 [/QUOTE]
 
-Один бинарь [B]apkg[/B]. Пакеты качает сам с GitHub (ветка [B]pkg[/B]).
+Один бинарь [B]apkg[/B]. Пакеты качает сам с GitHub (ветка [B]pkg[/B]), вручную ничего тащить не нужно.
 
-[B]Репозиторий:[/B] [URL=https://github.com/initialfox/yandex-station-repo]github.com/initialfox/yandex-station-repo[/URL]
-[B]Полная инструкция:[/B] [URL=https://github.com/initialfox/yandex-station-repo/blob/main/README.md]README.md[/URL]
-[B]Каталог пакетов:[/B] [URL=https://github.com/initialfox/yandex-station-repo/blob/main/packages.json]packages.json[/URL]
+[B]GitHub:[/B] [URL=https://github.com/initialfox/yandex-station-repo]github.com/initialfox/yandex-station-repo[/URL]
+[B]README:[/B] [URL=https://github.com/initialfox/yandex-station-repo/blob/main/README.md]полная инструкция[/URL]
+[B]Пакеты:[/B] [URL=https://github.com/initialfox/yandex-station-repo/blob/main/packages.json]packages.json[/URL]
 
 [HR]
 
-[SPOILER=Установка через ADB (с компа)]
+[SPOILER="1. Установка — ADB с компа (рекомендуется)"]
 [CODE]
 git clone https://github.com/initialfox/yandex-station-repo.git
 cd yandex-station-repo
 ./scripts/install-adb.sh
-# конкретное устройство:
+# несколько устройств / Wi‑Fi ADB:
 ./scripts/install-adb.sh -s IP:5555
 [/CODE]
-Скрипт качает apkg, делает [B]adb push[/B], сам определяет Android / buildroot.
-На buildroot пробует [B]mount -o remount,rw /[/B].
+
+Скрипт:
+[LIST]
+[*] качает свежий apkg
+[*] делает [B]adb push[/B]
+[*] сам определяет Android / buildroot
+[*] на buildroot пробует remount rw
+[*] запускает [CODE]apkg update[/CODE]
+[/LIST]
 [/SPOILER]
 
-[SPOILER=Установка по SSH / на станции]
+[SPOILER="2. Установка — SSH с компа"]
+[CODE]
+./scripts/install-ssh.sh root@IP
+./scripts/install-ssh.sh -p 2222 root@host
+[/CODE]
+На станции выполняется [CODE]install.sh[/CODE] (Android / buildroot + remount).
+[/SPOILER]
+
+[SPOILER="3. Установка — одной строкой на станции"]
 Если DNS живой:
 
 [CODE]
 curl -kfsSL https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
 [/CODE]
 
-Часто на колонке DNS мёртвый ([B]Could not resolve host[/B], resolv → ::1:53). Тогда:
+Часто DNS битый ([B]Could not resolve host[/B], в resolv.conf → [CODE]::1:53[/CODE]). Тогда:
 
 [CODE]
 curl -kfsSL --resolve raw.githubusercontent.com:443:185.199.108.133 \
   https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
 [/CODE]
 
-На [B]buildroot[/B], если Read-only file system:
+[B]buildroot[/B] + read-only:
 
 [CODE]
 mount -o remount,rw /
+curl -kfsSL --resolve raw.githubusercontent.com:443:185.199.108.133 \
+  https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/install.sh | sh
 [/CODE]
 
-Флаг [B]-k[/B] у curl обязателен (нет CA на станции).
+[B]-k[/B] у curl обязателен — на колонке часто нет CA.
 [/SPOILER]
 
-[SPOILER=Команды]
+[SPOILER="Команды"]
 [CODE]
-export PATH=/data/local/bin:/usr/local/bin:$PATH   # что актуально
+# PATH (что актуально для твоей ОС):
+export PATH=/data/local/bin:$PATH          # Android
+export PATH=/usr/local/bin:/opt/bin:$PATH  # buildroot
 
 apkg version
-apkg paths                 # flavor android | buildroot
+apkg paths          # flavor: android | buildroot
 apkg update
 apkg list
 apkg search vpn
 apkg install nano curl btop
-apkg install zsh fastfetch neofetch
+apkg install zsh fastfetch
 apkg install openvpn
 apkg remove nano
 apkg upgrade
 [/CODE]
 
-Musl-пакеты запускай по имени из PATH (обёртка), не голый файл из opt/.../bin/.
+Musl-пакеты запускай [B]по имени из PATH[/B] (обёртка), не голый ELF из [CODE]opt/.../bin/[/CODE].
 [/SPOILER]
 
-[SPOILER=Пакеты в репе]
-Актуальный список всегда в [URL=https://github.com/initialfox/yandex-station-repo/blob/main/packages.json]packages.json[/URL].
+[SPOILER="Пакеты (сейчас в репе)"]
+Актуальный список всегда здесь: [URL=https://github.com/initialfox/yandex-station-repo/blob/main/packages.json]packages.json[/URL]
 
-Сейчас, среди прочего:
 [LIST]
-[*] shell: zsh
-[*] system: btop, fastfetch, neofetch, apkg
-[*] net: curl, dropbear, darkhttpd, miniserve, iperf3, tcpdump, nmap
-[*] vpn: openvpn, wireguard
-[*] editors: nano
-[*] media: ffmpeg
-[*] db: sqlite
+[*] [B]shell[/B]: zsh
+[*] [B]system[/B]: apkg, btop, fastfetch, neofetch
+[*] [B]net[/B]: curl, dropbear, darkhttpd, miniserve, iperf3, tcpdump, nmap
+[*] [B]vpn[/B]: openvpn, wireguard
+[*] [B]editors[/B]: nano
+[*] [B]media[/B]: ffmpeg
+[*] [B]db[/B]: sqlite
+[/LIST]
+
+[I]neofetch[/I] — bash-скрипт, нужен [B]bash[/B] в PATH. Без bash лучше [B]fastfetch[/B] (нативный бинарь).
+[/SPOILER]
+
+[SPOILER="Частые грабли"]
+[LIST]
+[*] [B]buildroot read-only[/B] → [CODE]mount -o remount,rw /[/CODE]
+[*] [B]DNS[/B] → [CODE]--resolve[/CODE] или ставь через ADB push
+[*] Обновляй менеджер: [CODE]apkg version[/CODE] (нужен [B]1.0.7+[/B])
+[*] После правок в репе на станции: [CODE]apkg update[/CODE]
+[*] Если команда «not found» у musl — запускаешь голый ELF; нужен путь из PATH
 [/LIST]
 [/SPOILER]
 
-[SPOILER=Важно / частые грабли]
-[LIST]
-[*] [B]buildroot + read-only[/B] — без [CODE]mount -o remount,rw /[/CODE] ничего не поставится
-[*] [B]DNS[/B] — если curl не резолвит GitHub, используй --resolve (см. выше) или ставь через ADB push
-[*] Обновляй apkg: [CODE]apkg version[/CODE] (актуально 1.0.7+)
-[*] После обновления индекса: [CODE]apkg update[/CODE]
-[*] neofetch — bash-скрипт, нужен [B]bash[/B] в PATH (или ставь fastfetch — нативный бинарь)
-[/LIST]
-[/SPOILER]
+[SPOILER="Хочу добавить свой пакет"]
+Как собрать: [URL=https://github.com/initialfox/yandex-station-repo/blob/main/README.md]README → «Как добавить пакет»[/URL]
+(aarch64, musl или static, обёртка [CODE]#!/bin/sh[/CODE], pack + ветка pkg).
 
-[SPOILER=Хочу добавить свой пакет в репу]
-Как собрать самому: [URL=https://github.com/initialfox/yandex-station-repo/blob/main/README.md]README → «Как добавить пакет»[/URL]
-(aarch64, musl/static, обёртка #!/bin/sh, pack + ветка pkg).
-
-[B]Прислать готовое:[/B] в Telegram в личку [B][URL=https://t.me/initialfox]@initialfox[/URL][/B]
+[B]Прислать в репу:[/B] Telegram ЛС [B][URL=https://t.me/initialfox]@initialfox[/URL][/B]
 — архив / ссылка + что за утилита. Могу спокойно залить бинарники в репозиторий.
 [/SPOILER]
 
