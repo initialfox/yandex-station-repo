@@ -83,7 +83,7 @@ index = {
     "name": "yandex-station-repo",
     "arch": "aarch64",
     "description": "Пакеты для Яндекс.Станции (Alice Panel / apkg)",
-    "base_url": "https://github.com/initialfox/yandex-station-repo/releases/latest/download",
+    "base_url": "https://raw.githubusercontent.com/initialfox/yandex-station-repo/pkg",
     "index_url": "https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json",
     "packages": packages,
 }

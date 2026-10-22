@@ -22,15 +22,16 @@ import (
 
 const (
 	defaultIndexURL = "https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json"
-	defaultBaseURL  = "https://github.com/initialfox/yandex-station-repo/releases/latest/download"
-	version         = "1.0.3"
+	// пакеты лежат на ветке pkg (raw), не в Releases
+	defaultBaseURL = "https://raw.githubusercontent.com/initialfox/yandex-station-repo/pkg"
+	version        = "1.0.4"
 )
 
-// только GitHub (без CDN): raw + releases asset
+// только GitHub raw
 var indexFallbacks = []string{
 	"https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json",
+	"https://raw.githubusercontent.com/initialfox/yandex-station-repo/pkg/packages.json",
 	"https://github.com/initialfox/yandex-station-repo/raw/refs/heads/main/packages.json",
-	"https://github.com/initialfox/yandex-station-repo/releases/latest/download/packages.json",
 }
 
 // paths — Station 1 (Android: /data/local, /sdcard) vs gen2+ (buildroot: /opt, /usr/local, /tmp).
@@ -71,11 +72,11 @@ func detectPaths() paths {
 			p.State = "/data/local/apkg"
 		}
 		if p.Cache == "" {
-			// /sdcard есть не всегда
+			// /sdcard часто пустой/без mount — сначала /data/local
 			p.Cache = firstWritableDir(
-				"/sdcard/apkg-cache",
 				"/data/local/tmp/apkg-cache",
 				"/data/local/apkg/cache",
+				"/sdcard/apkg-cache",
 				"/tmp/apkg-cache",
 			)
 		}
@@ -260,10 +261,11 @@ func lookupPreferV4(ctx context.Context, host string) ([]string, error) {
 	return out, nil
 }
 
-// хосты GitHub-редиректов (releases → objects/release-assets)
+// хосты GitHub (raw / редиректы)
 var githubHosts = []string{
 	"github.com",
 	"raw.githubusercontent.com",
+	"media.githubusercontent.com",
 	"objects.githubusercontent.com",
 	"release-assets.githubusercontent.com",
 	"codeload.github.com",

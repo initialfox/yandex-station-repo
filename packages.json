@@ -2,20 +2,20 @@
   "name": "yandex-station-repo",
   "arch": "aarch64",
   "description": "Пакеты для Яндекс.Станции (Alice Panel / apkg)",
-  "base_url": "https://github.com/initialfox/yandex-station-repo/releases/latest/download",
+  "base_url": "https://raw.githubusercontent.com/initialfox/yandex-station-repo/pkg",
   "index_url": "https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json",
   "packages": [
     {
       "name": "apkg",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "arch": "aarch64",
       "description": "Пакетный менеджер Alice",
       "category": "system",
       "kind": "file",
-      "asset": "apkg.tar",
+      "asset": "apkg",
       "bin": "apkg",
       "check": "/data/local/bin/apkg",
-      "md5": "32c33aee503e72d305be14def664eca9",
+      "md5": "a0f56befbe602e27c9683cf3ad64887d",
       "size": 6291616
     },
     {
