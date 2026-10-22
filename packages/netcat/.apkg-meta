@@ -1,0 +1,7 @@
+version=1.226
+category=net
+kind=dir
+dest=/data/local/opt/netcat
+check=/data/local/opt/netcat/bin/nc
+description=netcat OpenBSD
+bin=nc
