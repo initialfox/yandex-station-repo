@@ -243,6 +243,20 @@
       "size": 10270208
     },
     {
+      "name": "tree",
+      "version": "2.1.3",
+      "arch": "aarch64",
+      "description": "Дерево каталогов",
+      "category": "util",
+      "kind": "dir",
+      "asset": "tree.tar",
+      "bin": "tree",
+      "dest": "/data/local/opt/tree",
+      "check": "/data/local/opt/tree/bin/tree",
+      "md5": "7954d30aced0ffb86f640792e755dbcf",
+      "size": 873984
+    },
+    {
       "name": "wireguard",
       "version": "1.0.0",
       "arch": "aarch64",
