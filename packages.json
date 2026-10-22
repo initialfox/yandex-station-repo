@@ -454,6 +454,20 @@
       "url": "https://github.com/initialfox/yandex-station-repo/releases/download/apkg-files/node.tar"
     },
     {
+      "name": "openssh",
+      "version": "9.7",
+      "arch": "aarch64",
+      "description": "OpenSSH client",
+      "category": "net",
+      "kind": "dir",
+      "asset": "openssh.tar",
+      "bin": "ssh",
+      "dest": "/data/local/opt/openssh",
+      "check": "/data/local/opt/openssh/bin/ssh",
+      "md5": "b9665085c6ef429582bf282f7e32be94",
+      "size": 7790592
+    },
+    {
       "name": "openssl",
       "version": "3.3.2",
       "arch": "aarch64",
