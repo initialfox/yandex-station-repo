@@ -229,6 +229,20 @@
       "size": 2060800
     },
     {
+      "name": "mtr",
+      "version": "0.95",
+      "arch": "aarch64",
+      "description": "My Traceroute",
+      "category": "net",
+      "kind": "dir",
+      "asset": "mtr.tar",
+      "bin": "mtr",
+      "dest": "/data/local/opt/mtr",
+      "check": "/data/local/opt/mtr/bin/mtr",
+      "md5": "24df1f9027bdd7e42a5af86d09f10ddf",
+      "size": 1811968
+    },
+    {
       "name": "nano",
       "version": "8.0",
       "arch": "aarch64",
