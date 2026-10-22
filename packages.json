@@ -341,6 +341,20 @@
       "size": 824832
     },
     {
+      "name": "xz",
+      "version": "5.6.2",
+      "arch": "aarch64",
+      "description": "Сжатие XZ/LZMA",
+      "category": "util",
+      "kind": "dir",
+      "asset": "xz.tar",
+      "bin": "xz",
+      "dest": "/data/local/opt/xz",
+      "check": "/data/local/opt/xz/bin/xz",
+      "md5": "464762e98398a2a412ed1c22ba7e5a7a",
+      "size": 1945088
+    },
+    {
       "name": "zip",
       "version": "3.0",
       "arch": "aarch64",
