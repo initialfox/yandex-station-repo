@@ -84,7 +84,7 @@ index = {
     "arch": "aarch64",
     "description": "Пакеты для Яндекс.Станции (Alice Panel / apkg)",
     "base_url": "https://github.com/initialfox/yandex-station-repo/releases/latest/download",
-    "index_url": "https://cdn.jsdelivr.net/gh/initialfox/yandex-station-repo@main/packages.json",
+    "index_url": "https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json",
     "packages": packages,
 }
 (root / "packages.json").write_text(json.dumps(index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

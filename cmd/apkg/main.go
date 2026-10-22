@@ -2,12 +2,14 @@
 package main
 
 import (
+	"context"
 	"crypto/md5"
 	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -18,10 +20,17 @@ import (
 )
 
 const (
-	defaultIndexURL = "https://cdn.jsdelivr.net/gh/initialfox/yandex-station-repo@main/packages.json"
+	defaultIndexURL = "https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json"
 	defaultBaseURL  = "https://github.com/initialfox/yandex-station-repo/releases/latest/download"
-	version         = "1.0.1"
+	version         = "1.0.2"
 )
+
+// только GitHub (без CDN): raw + releases asset
+var indexFallbacks = []string{
+	"https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json",
+	"https://github.com/initialfox/yandex-station-repo/raw/refs/heads/main/packages.json",
+	"https://github.com/initialfox/yandex-station-repo/releases/latest/download/packages.json",
+}
 
 // paths — Station 1 (Android: /data/local, /sdcard) vs gen2+ (buildroot: /opt, /usr/local, /tmp).
 type paths struct {
@@ -39,7 +48,6 @@ func init() {
 }
 
 func detectPaths() paths {
-	// явные override
 	p := paths{
 		Bindir: os.Getenv("APKG_BINDIR"),
 		Opt:    os.Getenv("APKG_OPT"),
@@ -47,12 +55,10 @@ func detectPaths() paths {
 		State:  os.Getenv("APKG_STATE"),
 	}
 
-	android := dirWritable("/data/local") || fileExists("/system/bin/linker64") || fileExists("/system/bin/linker")
-	// buildroot / полноценный Linux на колонках 2+
-	buildroot := fileExists("/bin/sh") && !fileExists("/system/bin/linker64") &&
-		(dirExists("/bkupgrade") || dirExists("/etc/os-release") || !dirExists("/system/bin"))
+	// Android = bionic linker. Не угадываем по /data/local (на gen2 тоже бывает).
+	isAndroid := fileExists("/system/bin/linker64") || fileExists("/system/bin/linker")
 
-	if android && !buildroot {
+	if isAndroid {
 		p.Flavor = "android"
 		if p.Bindir == "" {
 			p.Bindir = "/data/local/bin"
@@ -64,7 +70,7 @@ func detectPaths() paths {
 			p.State = "/data/local/apkg"
 		}
 		if p.Cache == "" {
-			// /sdcard есть не всегда; /data/local/tmp иногда SELinux — пробуем по очереди
+			// /sdcard есть не всегда
 			p.Cache = firstWritableDir(
 				"/sdcard/apkg-cache",
 				"/data/local/tmp/apkg-cache",
@@ -73,30 +79,30 @@ func detectPaths() paths {
 			)
 		}
 	} else {
+		// gen2+ полноценный buildroot — без /sdcard и /system/bin/sh
 		p.Flavor = "buildroot"
 		if p.Bindir == "" {
 			p.Bindir = firstWritableDir("/usr/local/bin", "/opt/bin", "/usr/bin", "/bin")
 		}
 		if p.Opt == "" {
-			// gen2 часто: /bkupgrade/data/local/opt или просто /opt
 			p.Opt = firstWritableDir(
 				"/bkupgrade/data/local/opt",
-				"/data/local/opt",
 				"/opt/alice",
 				"/opt",
 				"/usr/local/opt",
+				"/data/local/opt",
 			)
 		}
 		if p.State == "" {
 			p.State = firstWritableDir(
 				"/var/lib/apkg",
 				"/bkupgrade/data/local/apkg",
-				"/data/local/apkg",
 				"/opt/apkg",
 				"/tmp/apkg-state",
 			)
 		}
 		if p.Cache == "" {
+			// никогда не /sdcard
 			p.Cache = firstWritableDir(
 				"/var/cache/apkg",
 				"/tmp/apkg-cache",
@@ -168,10 +174,67 @@ type repoMeta struct {
 	Packages    []pkgMeta `json:"packages"`
 }
 
+// публичные DNS: на gen2/buildroot resolv.conf часто указывает на ::1:53 → connection refused
+var publicDNS = []string{
+	"77.88.8.8:53", // Yandex
+	"8.8.8.8:53",
+	"1.1.1.1:53",
+	"9.9.9.9:53",
+}
+
+var dnsResolver = &net.Resolver{
+	PreferGo: true,
+	Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+		d := net.Dialer{Timeout: 3 * time.Second}
+		var last error
+		for _, dns := range publicDNS {
+			c, err := d.DialContext(ctx, "udp", dns)
+			if err == nil {
+				return c, nil
+			}
+			last = err
+			c, err = d.DialContext(ctx, "tcp", dns)
+			if err == nil {
+				return c, nil
+			}
+			last = err
+		}
+		return nil, last
+	},
+}
+
 var httpClient = &http.Client{
 	Timeout: 120 * time.Second,
 	Transport: &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // станция без CA
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			// IP — без DNS
+			if ip := net.ParseIP(host); ip != nil {
+				d := net.Dialer{Timeout: 15 * time.Second}
+				return d.DialContext(ctx, network, addr)
+			}
+			ips, err := dnsResolver.LookupIPAddr(ctx, host)
+			if err != nil || len(ips) == 0 {
+				// системный DNS как запасной
+				d := net.Dialer{Timeout: 15 * time.Second}
+				return d.DialContext(ctx, network, addr)
+			}
+			d := net.Dialer{Timeout: 15 * time.Second}
+			var last error
+			for _, ipa := range ips {
+				target := net.JoinHostPort(ipa.IP.String(), port)
+				c, err := d.DialContext(ctx, network, target)
+				if err == nil {
+					return c, nil
+				}
+				last = err
+			}
+			return nil, last
+		},
 	},
 }
 
@@ -656,28 +719,67 @@ func loadIndex() (*repoMeta, error) {
 }
 
 func fetchIndex(save bool) (*repoMeta, error) {
-	req, _ := http.NewRequest("GET", indexURL(), nil)
+	urls := []string{indexURL()}
+	for _, u := range indexFallbacks {
+		if u != urls[0] {
+			urls = append(urls, u)
+		}
+	}
+	var last error
+	for _, u := range urls {
+		m, b, err := fetchIndexURL(u)
+		if err != nil {
+			last = err
+			fmt.Fprintf(os.Stderr, "  · индекс %s: %v\n", u, err)
+			continue
+		}
+		if save {
+			_ = os.WriteFile(filepath.Join(stateDir(), "packages.json"), b, 0644)
+		}
+		return m, nil
+	}
+	if last == nil {
+		last = fmt.Errorf("все зеркала индекса недоступны")
+	}
+	return nil, last
+}
+
+func fetchIndexURL(u string) (*repoMeta, []byte, error) {
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
 	req.Header.Set("User-Agent", "apkg/"+version)
 	res, err := httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		// curl с тем же URL (иногда свой DNS/DoH)
+		tmp := filepath.Join(cacheDir(), "packages.json.tmp")
+		if err2 := downloadCurl(u, tmp); err2 != nil {
+			return nil, nil, err
+		}
+		b, err2 := os.ReadFile(tmp)
+		if err2 != nil {
+			return nil, nil, err
+		}
+		var m repoMeta
+		if err2 := json.Unmarshal(b, &m); err2 != nil {
+			return nil, nil, err2
+		}
+		return &m, b, nil
 	}
 	defer res.Body.Close()
 	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("index HTTP %d", res.StatusCode)
+		return nil, nil, fmt.Errorf("HTTP %d", res.StatusCode)
 	}
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var m repoMeta
 	if err := json.Unmarshal(b, &m); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if save {
-		_ = os.WriteFile(filepath.Join(stateDir(), "packages.json"), b, 0644)
-	}
-	return &m, nil
+	return &m, b, nil
 }
 
 func download(url, dst string) error {
@@ -704,10 +806,19 @@ func download(url, dst string) error {
 
 func downloadCurl(url, dst string) error {
 	curl := "curl"
-	if _, err := os.Stat("/data/local/bin/curl"); err == nil {
-		curl = "/data/local/bin/curl"
+	for _, c := range []string{
+		filepath.Join(P.Bindir, "curl"),
+		"/data/local/bin/curl",
+		"/usr/local/bin/curl",
+		"/usr/bin/curl",
+		"/bin/curl",
+	} {
+		if _, err := os.Stat(c); err == nil {
+			curl = c
+			break
+		}
 	}
-	cmd := exec.Command(curl, "-kfL", "--retry", "3", "-o", dst, url)
+	cmd := exec.Command(curl, "-kfL", "--retry", "3", "--connect-timeout", "15", "-o", dst, url)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
