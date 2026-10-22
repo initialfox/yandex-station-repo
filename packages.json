@@ -75,6 +75,20 @@
       "size": 806400
     },
     {
+      "name": "dig",
+      "version": "9.18.27",
+      "arch": "aarch64",
+      "description": "dig/host/nslookup",
+      "category": "net",
+      "kind": "dir",
+      "asset": "dig.tar",
+      "bin": "dig",
+      "dest": "/data/local/opt/dig",
+      "check": "/data/local/opt/dig/bin/dig",
+      "md5": "e0330a63c502499790f7567a61fab338",
+      "size": 19378176
+    },
+    {
       "name": "dropbear",
       "version": "2022.82",
       "arch": "aarch64",
