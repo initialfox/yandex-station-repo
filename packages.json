@@ -211,8 +211,8 @@
       "bin": "socat",
       "dest": "/data/local/opt/socat",
       "check": "/data/local/opt/socat/bin/socat",
-      "md5": "42c15b550329c7893f989bb2011b1fa6",
-      "size": 2561024
+      "md5": "cb82c6cb5d2d884e719ebd2e361c5532",
+      "size": 8238592
     },
     {
       "name": "sqlite",
