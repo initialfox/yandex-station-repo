@@ -1,20 +1,36 @@
 #!/usr/bin/env bash
-# Упаковать каждый packages/<name> → dist/<name>.tar и собрать packages.json
+# Упаковать каждый packages/<name> → dist/<name>.tar и собрать packages.json.
+# Пакеты из текущего индекса без исходников в packages/ не выпадают: запись
+# переносится как есть, а её архив берётся из ветки pkg (с проверкой md5), чтобы
+# push-pkg-branch.sh (force-push только dist/) не удалил его из pkg.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-export COPYFILE_DISABLE=1
+. "$ROOT/scripts/tar-flags.sh"
 rm -rf dist
 mkdir -p dist
 
 python3 - <<'PY'
-import hashlib, json, os, subprocess
+import hashlib, json, os, subprocess, sys
 from pathlib import Path
 
 root = Path(".")
 pkgs_dir = root / "packages"
 dist = root / "dist"
 dist.mkdir(exist_ok=True)
+tar_flags = os.environ.get("TAR_CREATE_FLAGS_STR", "").split()
+
+def md5_file(path):
+    h = hashlib.md5()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+index_path = root / "packages.json"
+old_index = json.loads(index_path.read_text(encoding="utf-8")) if index_path.is_file() else {}
+old_pkgs = {p["name"]: p for p in old_index.get("packages", [])}
+base_url = (old_index.get("base_url") or "https://raw.githubusercontent.com/initialfox/yandex-station-repo/pkg").rstrip("/")
 
 # meta hints from existing fields / defaults
 META = {
@@ -45,15 +61,10 @@ for name in sorted(os.listdir(pkgs_dir)):
         continue
     asset = f"{name}.tar"
     out = dist / asset
-    # pack directory as top-level name/
-    subprocess.check_call(["tar", "-C", str(pkgs_dir), "-cf", str(out), name])
+    # pack directory as top-level name/ (без xattr macOS — см. scripts/tar-flags.sh)
+    subprocess.check_call(["tar", *tar_flags, "-C", str(pkgs_dir), "-cf", str(out), name])
     size = out.stat().st_size
-    # md5 of tar
-    h = hashlib.md5()
-    with open(out, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    md5 = h.hexdigest()
+    md5 = md5_file(out)
     ver, cat, kind, dest, check, desc = META.get(
         name, ("0.0.0", "misc", "dir", f"/data/local/opt/{name}", f"/data/local/opt/{name}", name)
     )
@@ -95,6 +106,44 @@ for name in sorted(os.listdir(pkgs_dir)):
         entry.pop("dest", None)
     packages.append(entry)
     print(f"packed {name}: {size/1024/1024:.1f} MB")
+
+def fetch_from_pkg(asset, dst, want_md5):
+    """Текущий архив из ветки pkg: сначала локальный origin/pkg, потом raw.
+    True — есть и md5 совпал; False — архива нет; строка — md5 найденного архива."""
+    other = False
+    for cmd in (
+        ["git", "cat-file", "blob", f"origin/pkg:{asset}"],
+        ["curl", "-fsSL", "--retry", "3", f"{base_url}/{asset}"],
+    ):
+        r = subprocess.run(cmd, capture_output=True)
+        if r.returncode != 0:
+            continue
+        h = hashlib.md5(r.stdout).hexdigest()
+        if not want_md5 or h == want_md5:
+            dst.write_bytes(r.stdout)
+            return True
+        other = h
+    return other
+
+built = {p["name"] for p in packages}
+problems = []
+for name, e in sorted(old_pkgs.items()):
+    if name in built:
+        continue
+    asset = e.get("asset") or f"{name}.tar"
+    got = fetch_from_pkg(asset, dist / asset, e.get("md5", ""))
+    if got is True:
+        print(f"kept   {name}: нет packages/{name} — {asset} взят из ветки pkg")
+    elif got is False:
+        print(f"WARN   {name}: нет ни packages/{name}, ни {asset} в ветке pkg — запись оставлена как есть")
+    else:
+        problems.append(f"{name}: у {asset} в ветке pkg md5 {got}, а в индексе {e.get('md5')}")
+        continue
+    packages.append(e)
+if problems:
+    sys.exit("ОШИБКА: индекс и ветка pkg разошлись, packages.json не записан.\n"
+             "Поправь md5/size в индексе или пересобери пакет:\n  " + "\n  ".join(problems))
+packages.sort(key=lambda p: p["name"])
 
 index = {
     "name": "yandex-station-repo",

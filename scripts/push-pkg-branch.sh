@@ -20,11 +20,34 @@ trap 'rm -rf "$TMP"' EXIT
 
 cp "$DIST"/*.tar "$TMP/" 2>/dev/null || true
 rm -f "$TMP/apkg.tar"
-test -f "$DIST/apkg" && cp "$DIST/apkg" "$TMP/apkg"
+# Голый бинарь apkg качают install*.sh. pack-packages.sh его не собирает, и без
+# dist/apkg force-push удалил бы его из pkg — тогда берём уже опубликованный.
+if [ -f "$DIST/apkg" ]; then
+  cp "$DIST/apkg" "$TMP/apkg"
+elif curl -fsSL -o "$TMP/apkg" "https://raw.githubusercontent.com/initialfox/yandex-station-repo/pkg/apkg" ||
+  git -C "$ROOT" cat-file blob origin/pkg:apkg > "$TMP/apkg" 2>/dev/null; then
+  echo "dist/apkg нет — оставляю опубликованный apkg из ветки pkg"
+else
+  echo "нет dist/apkg и не удалось взять текущий apkg из ветки pkg — без него install.sh сломается"
+  exit 1
+fi
 cp "$ROOT/packages.json" "$TMP/packages.json"
 # тяжёлые опционально: SKIP_HEAVY=1
 if [ "${SKIP_HEAVY:-}" = 1 ]; then
   rm -f "$TMP/ffmpeg.tar" "$TMP/nmap.tar"
+fi
+# ветка pkg перезаписывается целиком: всё, что индекс обещает, но сюда не попало, пропадёт
+MISSING=$(python3 - "$ROOT/packages.json" "$TMP" <<'PY'
+import json, os, sys
+for p in json.load(open(sys.argv[1], encoding="utf-8"))["packages"]:
+    asset = p.get("asset") or p["name"] + ".tar"
+    if not os.path.exists(os.path.join(sys.argv[2], asset)):
+        print("  %s (%s)" % (p["name"], asset))
+PY
+)
+if [ -n "$MISSING" ]; then
+  echo "ВНИМАНИЕ: в индексе есть, но в ветку pkg не попадут (apkg install даст 404):"
+  echo "$MISSING"
 fi
 
 cd "$TMP"
