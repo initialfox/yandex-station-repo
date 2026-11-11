@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
-# Один пакет: build → тест на станции → pack → pkg/main → git → TG
+# Один пакет: build → тест на станции → pack → commit → pkg (архив) → main (git push) → pkg (индекс) → TG
 # Usage: ./scripts/one-pkg.sh <name> <apk...> [--bin X] [--cat Y] [--desc Z] [--ver V]
 #        ./scripts/one-pkg.sh --why "что изменено" ...  # для обновления
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+. "$ROOT/scripts/tar-flags.sh"
+
+die() {
+  echo "ОШИБКА: $*" >&2
+  exit 1
+}
 
 WHY=""
 ARGS=()
@@ -26,6 +32,14 @@ ssh_st() {
     -o PubkeyAuthentication=no -o LogLevel=ERROR -o ConnectTimeout=20 "$ST" "$@"
 }
 
+# main обновляется обычным git push (индекс вместе с packages/<name>), поэтому
+# сначала догоняем origin/main: правим свежий индекс, а конфликт видим до сборки
+[[ "$(git rev-parse --abbrev-ref HEAD)" == main ]] || die "скрипт публикует в main — переключись на ветку main"
+if ! git pull --rebase --autostash origin main; then
+  git rebase --abort 2>/dev/null || true
+  die "git pull --rebase origin main не прошёл — разреши конфликт и запусти снова"
+fi
+
 echo "======== BUILD $NAME ========"
 ./scripts/mk-alpine-pkg.sh "${ARGS[@]}"
 META="packages/$NAME/.apkg-meta"
@@ -36,48 +50,18 @@ DESC=$(sed -n 's/^description=//p' "$META")
 CAT=$(sed -n 's/^category=//p' "$META")
 
 echo "======== TEST $NAME on station ========"
-tar -C packages -cf "/tmp/${NAME}-one.tar" "$NAME"
+# сама проверка — scripts/station-smoke.sh (общая с batch-*.sh)
+tar_c -C packages -cf "/tmp/${NAME}-one.tar" "$NAME"
 ssh_st "cat > /data/local/tmp/${NAME}-one.tar" < "/tmp/${NAME}-one.tar"
-OUT=$(ssh_st "/system/bin/sh -c '
-  export ANDROID_DATA=/data ANDROID_ROOT=/system
-  cd /data/local/tmp || exit 1
-  rm -rf $NAME
-  tar xf ${NAME}-one.tar || exit 1
-  RUN=./$NAME/${NAME}-run
-  OV=/data/local/tmp/apkg-ov.txt
-  ok=0
-  # пробуем несколько флагов; не останавливаемся на exit0 с «unrecognized option»
-  : >\$OV
-  for flg in -V -v --version -h; do
-    \$RUN \$flg >\$OV 2>&1 || true
-    if grep -qiE \"Error loading shared library|cannot open shared object\" \$OV; then
-      ok=0; break
-    fi
-    if grep -qiE \"unrecognized option|invalid option|unknown option\" \$OV; then
-      continue
-    fi
-    if grep -qiE \"[0-9]+\\.[0-9]+|[0-9]{2,}|usage|Usage|Syntax|Copyright|comes with|socat\" \$OV; then
-      ok=1; break
-    fi
-  done
-  if [ \$ok = 0 ] && [ -x ./$NAME/bin/$BIN ]; then
-    # бинарь на месте и loader не ругался — ок для TUI (htop/screen)
-    if ! grep -qiE \"Error loading shared library|cannot open shared object\" \$OV; then
-      ok=1
-    fi
-  fi
-  dd if=\$OV bs=240 count=1 2>/dev/null; echo
-  rm -rf $NAME ${NAME}-one.tar \$OV
-  [ \$ok = 1 ] && echo TEST_OK || echo TEST_FAIL
-'")
-echo "$OUT"
-echo "$OUT" | grep -q TEST_OK || { echo "TEST FAILED for $NAME"; exit 1; }
+ssh_st "cat > /data/local/tmp/apkg-smoke.sh" < scripts/station-smoke.sh
 rm -f "/tmp/${NAME}-one.tar"
+OUT=$(ssh_st "/system/bin/sh /data/local/tmp/apkg-smoke.sh /data/local/tmp/${NAME}-one.tar $NAME $BIN" 2>&1) || true
+echo "$OUT"
+echo "$OUT" | grep -qx TEST_OK || die "TEST FAILED for $NAME"
 
-echo "======== PACK + PUSH ========"
+echo "======== PACK ========"
 mkdir -p dist
-export COPYFILE_DISABLE=1
-tar -C packages -cf "dist/${NAME}.tar" "$NAME"
+tar_c -C packages -cf "dist/${NAME}.tar" "$NAME"
 python3 - "$NAME" <<'PY'
 import hashlib, json, os, sys
 name = sys.argv[1]
@@ -113,10 +97,30 @@ print(name, "new" if is_new else "upd", h, size)
 PY
 IS_NEW=$(cat /tmp/apkg-is-new)
 
+echo "======== COMMIT main ========"
+# Раньше main получал packages.json через Contents API, а коммит с packages/<name>
+# молча терялся (git pull/push … || true). Теперь индекс и исходники уходят одним
+# коммитом, и любая ошибка git останавливает скрипт до анонса в TG.
+git add -- "packages/$NAME" packages.json
+# правки сборщика и скриптов публикации едут вместе с пакетом (как раньше)
+git add -- scripts/mk-alpine-pkg.sh scripts/one-pkg.sh scripts/station-smoke.sh scripts/tar-flags.sh
+if git diff --cached --quiet; then
+  echo "main: нечего коммитить"
+else
+  git commit -m "apkg: ${NAME} ${VER}"
+fi
+# конфликт ловим до публикации архива
+if ! git pull --rebase --autostash origin main; then
+  git rebase --abort 2>/dev/null || true
+  die "git pull --rebase origin main не прошёл — ничего не опубликовано; разреши конфликт и запусти снова"
+fi
+
+# gh_put <путь в репо> <локальный файл> <сообщение коммита> <ветка>
 # GitHub Contents API (timeout 600s) — clone ветки pkg слишком тяжёлый
-python3 - "$NAME" "$VER" <<'PY'
+gh_put() {
+  python3 - "$@" <<'PY'
 import base64, json, os, sys, urllib.request, ssl
-name, ver = sys.argv[1], sys.argv[2]
+path, local, msg, branch = sys.argv[1:5]
 def github_token():
     for cmd in (
         "gh auth token",
@@ -181,16 +185,19 @@ def put(path, data, msg, branch, tries=4):
                 continue
             raise
 
-put(f"{name}.tar", open(f"dist/{name}.tar", "rb").read(), f"apkg: {name} {ver}", "pkg")
-put("packages.json", open("packages.json", "rb").read(), f"packages.json: {name}", "pkg")
-put("packages.json", open("packages.json", "rb").read(), f"packages.json: {name}", "main")
+put(path, open(local, "rb").read(), msg, branch)
 PY
+}
 
-git add "packages/$NAME" packages.json scripts/mk-alpine-pkg.sh scripts/one-pkg.sh 2>/dev/null || true
-git add "packages/$NAME" packages.json
-git commit -m "apkg: ${NAME} ${VER}" || true
-git pull --rebase origin main || true
-git push origin HEAD || true
+echo "======== PUSH pkg: ${NAME}.tar ========"
+gh_put "${NAME}.tar" "dist/${NAME}.tar" "apkg: ${NAME} ${VER}" pkg
+
+echo "======== PUSH main ========"
+git push origin HEAD:main || die "git push в main не прошёл: ${NAME}.tar уже в ветке pkg, а индекс в main старый — исправь причину и выполни «git push origin HEAD:main»"
+
+echo "======== PUSH pkg: packages.json ========"
+# запасной индекс apkg (indexFallbacks) — копия main
+gh_put packages.json packages.json "packages.json: ${NAME}" pkg
 
 echo "======== TG ========"
 if [[ "$IS_NEW" == "1" ]]; then

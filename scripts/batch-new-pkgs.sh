@@ -3,6 +3,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+. "$ROOT/scripts/tar-flags.sh"
 MK=./scripts/mk-alpine-pkg.sh
 export SSHPASS="${SSHPASS:-\$Nikitosina04}"
 ST="${STATION_HOST:-root@192.168.1.116}"
@@ -57,47 +58,23 @@ test_pkg() {
   local bin="$2"
   local tar="/tmp/${name}-test.tar"
   local remote="/data/local/tmp/${name}-test.tar"
-  tar -C packages -cf "$tar" "$name"
+  tar_c -C packages -cf "$tar" "$name"
   push_file "$tar" "$remote"
+  rm -f "$tar"
   local out
-  out=$(ssh_st "/system/bin/sh -c '
-    set -e
-    cd /data/local/tmp
-    rm -rf $name
-    tar xf ${name}-test.tar
-    BIN=\$(cat $name/.apkg-meta | sed -n \"s/^bin=//p\")
-    [ -n \"\$BIN\" ] || BIN=$bin
-    RUN=./$name/${name}-run
-    # smoke
-    if \$RUN --version >/tmp/apkg-out 2>&1 || \$RUN -V >/tmp/apkg-out 2>&1 || \$RUN -v >/tmp/apkg-out 2>&1 || \$RUN version >/tmp/apkg-out 2>&1; then
-      head -c 200 /tmp/apkg-out
-      echo
-      echo TEST_OK
-    else
-      # некоторые утилиты без --version просто печатают usage и exit!=0 — проверим что loader стартует
-      if \$RUN 2>&1 | head -c 200; then true; fi
-      if [ -x ./$name/bin/\$BIN ]; then
-        echo TEST_OK_BIN
-      else
-        echo TEST_FAIL
-        cat /tmp/apkg-out 2>/dev/null | head -c 300
-        exit 1
-      fi
-    fi
-    rm -rf $name ${name}-test.tar /tmp/apkg-out
-  '" 2>&1) || {
-    echo "$out"
-    echo "$name FAIL" >> "$RESULTS"
-    return 1
-  }
+  # проверка — scripts/station-smoke.sh (та же, что в one-pkg.sh). Раньше здесь
+  # «бинарь исполняемый» давало TEST_OK_BIN даже при ошибке загрузчика.
+  out=$(ssh_st "/system/bin/sh /data/local/tmp/apkg-smoke.sh $remote $name $bin" 2>&1) || true
   echo "$out" | tail -5
-  if echo "$out" | grep -q 'TEST_OK'; then
+  if echo "$out" | grep -qx TEST_OK; then
     echo "$name OK" >> "$RESULTS"
     return 0
   fi
   echo "$name FAIL" >> "$RESULTS"
   return 1
 }
+
+push_file scripts/station-smoke.sh /data/local/tmp/apkg-smoke.sh
 
 ok=0; fail=0
 for entry in "${PKGS[@]}"; do

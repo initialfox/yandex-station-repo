@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Собрать musl-бандл из Alpine aarch64 APK → packages/<name>/
-# Usage: ./scripts/mk-alpine-pkg.sh <name> <apk> [apk...] [--bin binary] [--ver X] [--cat Y] [--desc Z]
+# Usage: ./scripts/mk-alpine-pkg.sh <name> <apk> [apk...] [--bin binary] [--ver X] [--cat Y] [--desc Z] [--perl-full]
+# Главная программа — ELF или скрипт на sh/bash/perl (интерпретатор кладётся в пакет).
+# --perl-full — не вырезать из perl тяжёлые редко нужные модули (CJK-кодировки, Collate, dev-утилиты).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BRANCH="${ALPINE_BRANCH:-v3.20}"
@@ -19,12 +21,14 @@ BIN=""
 VER=""
 CAT="misc"
 DESC=""
+PERL_FULL=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --bin) BIN="$2"; shift 2 ;;
     --ver) VER="$2"; shift 2 ;;
     --cat) CAT="$2"; shift 2 ;;
     --desc) DESC="$2"; shift 2 ;;
+    --perl-full) PERL_FULL=1; shift ;;
     --*) echo "unknown flag $1" >&2; exit 2 ;;
     *)
       if [[ -z "$NAME" ]]; then NAME="$1"; else APKS+=("$1"); fi
@@ -221,32 +225,70 @@ cp -a "$LOADER" "$OUT/lib/"
 find "$WORK/root" -name 'libc.musl-aarch64.so.1' -exec cp -a {} "$OUT/lib/" \;
 ln -sfn ld-musl-aarch64.so.1 "$OUT/lib/libc.so" 2>/dev/null || true
 
-# all shared libs — symlink'и Alpine часто ../../lib/foo.so → копируем РЕАЛЬНЫЙ файл под SONAME
+# real_path <путь> — как readlink -f (которого нет в старом macOS), но абсолютная
+# ссылка из APK (/usr/lib/…) разрешается внутри $WORK/root, а не в файл хоста
+real_path() {
+  local p="$1" t n=0
+  while [[ -L "$p" && $n -lt 40 ]]; do
+    t=$(readlink "$p") || return 1
+    case "$t" in
+      /*) p="$WORK/root$t" ;;
+      *) p="$(dirname "$p")/$t" ;;
+    esac
+    n=$((n + 1))
+  done
+  [[ -f "$p" ]] || return 1
+  printf '%s\n' "$p"
+}
+
+# place_lib <файл> <имя> — положить файл в $OUT/lib/<имя>, если этого имени там ещё нет
+place_lib() {
+  local src="$1" dst="$OUT/lib/$2"
+  if [[ -e "$dst" || -L "$dst" ]]; then
+    cmp -s "$src" "$dst" || echo "WARN: lib/$2: другой файл с тем же именем ($src) пропущен" >&2
+    return 0
+  fi
+  cp -p "$src" "$dst"
+}
+
+# Общие .so → $OUT/lib (плоско: их ищет загрузчик по LD_LIBRARY_PATH / --library-path).
+# Алиас (symlink Alpine: libz.so.1 → libz.so.1.3.2, usr/lib/x.so → ../../lib/x.so.1)
+# становится symlink'ом на один реальный файл — раньше каждый алиас был полной копией.
+# XS-модули perl (perl5/…/auto/*.so) сюда не кладём: perl ищет их в auto/<Модуль>/
+# рядом с .pm (дерево копирует bundle_perl), а при плоском копировании одноимённые
+# затирали друг друга (List::Util и Hash::Util — оба Util.so).
 copy_lib() {
-  local f="$1" base real
+  local f="$1" base real rbase
   base=$(basename "$f")
   case "$base" in
     ld-musl-aarch64.so.1) return 0 ;;
     # openssl engines — не нужны CLI, раздувают бандл
     afalg.so|capi.so|padlock.so|legacy.so|loader_attic.so) return 0 ;;
   esac
+  case "$f" in
+    */perl5/*/CORE/libperl.so) ;; # libperl нужен самому бинарю perl — в общий lib/
+    */perl5/*) return 0 ;;
+  esac
   if [[ -L "$f" ]]; then
-    real=$(readlink -f "$f" 2>/dev/null || true)
-    if [[ -z "$real" || ! -f "$real" ]]; then
-      # macOS: нет readlink -f
-      real=$(python3 -c "import os; print(os.path.realpath('$f'))" 2>/dev/null || true)
-    fi
-    if [[ -n "$real" && -f "$real" ]]; then
-      cp -a "$real" "$OUT/lib/$base"
-      return 0
+    real=$(real_path "$f") || return 0
+    rbase=$(basename "$real")
+    place_lib "$real" "$rbase"
+    if [[ "$base" != "$rbase" && ! -e "$OUT/lib/$base" && ! -L "$OUT/lib/$base" ]]; then
+      ln -s "$rbase" "$OUT/lib/$base"
     fi
     return 0
   fi
-  [[ -f "$f" ]] && cp -a "$f" "$OUT/lib/$base"
+  if [[ -f "$f" ]]; then
+    place_lib "$f" "$base"
+  fi
+  return 0
 }
+# сначала lib/ и usr/lib/ верхнего уровня, потом подкаталоги: при совпадении имён
+# остаётся настоящая библиотека, а не одноимённый плагин
 while IFS= read -r f; do
   copy_lib "$f"
-done < <(find "$WORK/root" \( -type f -o -type l \) -name '*.so*' 2>/dev/null || true)
+done < <(find "$WORK/root" \( -type f -o -type l \) -name '*.so*' 2>/dev/null \
+  | awk -F/ '{ print NF "\t" $0 }' | sort -s -n -k1,1 | cut -f2- || true)
 
 # binaries: prefer usr/bin, bin, sbin
 # (не pipefail+head: find по несуществующим path даёт exit 1)
@@ -272,8 +314,7 @@ copy_bin() {
   f=$(find_bin "$b") || return 1
   # разыменовать symlink → копируем реальный бинарь под именем b
   if [[ -L "$f" ]]; then
-    real=$(readlink -f "$f" 2>/dev/null || readlink "$f")
-    [[ "$real" != /* ]] && real="$(dirname "$f")/$real"
+    real=$(real_path "$f") || return 1
     cp -a "$real" "$OUT/bin/$b"
   else
     cp -a "$f" "$OUT/bin/$b"
@@ -369,23 +410,230 @@ case "$NAME" in
     ;;
 esac
 
+# script_interp <файл> → «ELF», «<интерпретатор><TAB><аргументы>» или пусто (непонятный файл)
+script_interp() {
+  python3 - "$1" <<'PY'
+import os, sys
+with open(sys.argv[1], "rb") as f:
+    head = f.read(512)
+if head.startswith(b"\x7fELF"):
+    print("ELF")
+elif head.startswith(b"#!"):
+    words = head[2:].split(b"\n", 1)[0].decode("utf-8", "replace").split()
+    if words and os.path.basename(words[0]) == "env":
+        words = words[1:]
+        while words and words[0].startswith("-"):  # env -S …
+            words = words[1:]
+    if words:
+        print(os.path.basename(words[0]) + "\t" + " ".join(words[1:]))
+PY
+}
+
+# perl-скрипт: кладём perl, libperl.so (уже в lib/) и деревья модулей с исходной
+# структурой каталогов; вырезаем тяжёлое и почти никогда не нужное, если скрипт на
+# это не ссылается. Заполняет RUN_ENV — окружение для обёртки.
+bundle_perl() {
+  copy_bin perl || { echo "ERROR: $BIN — perl-скрипт, а perl нет среди зависимостей (добавь apk perl)" >&2; exit 1; }
+  [[ -f "$OUT/lib/libperl.so" ]] || { echo "ERROR: нет libperl.so для perl" >&2; exit 1; }
+  local inc d p5="" p5d=""
+  inc=$(python3 - "$WORK/root" "$OUT" "$OUT/bin/$BIN" "$PERL_FULL" <<'PY'
+import os, re, shutil, sys
+
+root, out, script, full = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] == "1"
+# каталог Alpine → каталог в пакете; порядок = порядок @INC у Alpine (vendor, потом core)
+TREES = [
+    ("usr/lib/perl5/vendor_perl", "lib/perl5/vendor_perl"),
+    ("usr/share/perl5/vendor_perl", "share/perl5/vendor_perl"),
+    ("usr/lib/perl5/core_perl", "lib/perl5/core_perl"),
+    ("usr/share/perl5/core_perl", "share/perl5/core_perl"),
+]
+inc = []
+for src, dst in TREES:
+    s = os.path.join(root, src)
+    if not os.path.isdir(s) or not os.listdir(s):
+        continue
+    # CORE/ — это libperl.so (он уже в lib/): в дерево модулей не нужен
+    skip_core = lambda d, names, s=s: ["CORE"] if os.path.samefile(d, s) and "CORE" in names else []
+    shutil.copytree(s, os.path.join(out, dst), symlinks=True, ignore=skip_core)
+    inc.append(dst)
+if not inc:
+    sys.exit("ERROR: в зависимостях нет модулей perl (usr/lib/perl5, usr/share/perl5)")
+
+# Модули, на которые скрипт ссылается (use/require, в том числе внутри строк для
+# perl -e и eval), транзитивно по .pm. Это страховка для вырезания ниже, а не точный
+# список: динамический require $x так не виден.
+POD = re.compile(rb"^=[a-zA-Z].*?(?:^=cut\b[^\n]*|\Z)", re.M | re.S)
+USE = re.compile(rb"\b(?:use|require)\s+([A-Za-z_]\w*(?:::\w+)*)")
+
+def find_pm(mod):
+    rel = mod.replace("::", "/") + ".pm"
+    for d in inc:
+        if os.path.isfile(os.path.join(out, d, rel)):
+            return d, rel
+    return None
+
+needed, missing, seen, queue = set(), set(), set(), [script]
+while queue:
+    with open(queue.pop(), "rb") as f:
+        text = f.read()
+    text = re.split(rb"(?m)^__(?:END|DATA)__\b", text, maxsplit=1)[0]
+    for m in USE.finditer(POD.sub(b"", text)):
+        mod = m.group(1).decode()
+        if mod in seen:
+            continue
+        seen.add(mod)
+        hit = find_pm(mod)
+        if hit:
+            needed.add(hit[1])
+            queue.append(os.path.join(out, *hit))
+        elif "::" in mod or (mod.isupper() and len(mod) > 1):  # не «Foo»/«C» из комментариев
+            missing.add(mod)
+
+# Тяжёлое и почти никогда не нужное CLI-скрипту (~19 МБ из ~39 МБ perl в Alpine 3.20)
+PRUNE = {
+    "Encode::JP": ["Encode/JP.pm", "Encode/JP", "auto/Encode/JP"],
+    "Encode::KR": ["Encode/KR.pm", "Encode/KR", "auto/Encode/KR"],
+    "Encode::CN": ["Encode/CN.pm", "Encode/CN", "auto/Encode/CN"],
+    "Encode::TW": ["Encode/TW.pm", "Encode/TW", "auto/Encode/TW"],
+    "Unicode::Collate": ["Unicode/Collate.pm", "Unicode/Collate", "auto/Unicode/Collate"],
+    "Module::CoreList": ["Module/CoreList.pm", "Module/CoreList"],
+    # сборка/установка модулей, тесты, отладчик, perldoc
+    "CPAN": ["CPAN.pm", "CPAN"],
+    "ExtUtils": ["ExtUtils"],
+    "TAP": ["TAP"],
+    "Test": ["Test.pm", "Test"],
+    "Test2": ["Test2.pm", "Test2"],
+    "App": ["App"],
+    "perl5db": ["perl5db.pl"],
+    "Pod::Perldoc": ["Pod/Perldoc.pm", "Pod/Perldoc"],
+}
+
+def size(p):
+    if os.path.isdir(p) and not os.path.islink(p):
+        return sum(os.lstat(os.path.join(a, n)).st_size for a, _, ns in os.walk(p) for n in ns)
+    return os.lstat(p).st_size
+
+def remove(p):
+    # .pm в Alpine — 0444: сначала вернуть право записи (каталог 0555 иначе не удалить)
+    if os.path.isdir(p) and not os.path.islink(p):
+        for a, _, ns in os.walk(p):
+            os.chmod(a, 0o755)
+            for n in ns:
+                if not os.path.islink(os.path.join(a, n)):
+                    os.chmod(os.path.join(a, n), 0o644)
+        shutil.rmtree(p)
+    else:
+        if not os.path.islink(p):
+            os.chmod(p, 0o644)
+        os.remove(p)
+
+cut, kept, removed = [], [], 0
+if not full:
+    for group, paths in PRUNE.items():
+        if any(rel == p or rel.startswith(p + "/") for rel in needed for p in paths):
+            kept.append(group)
+            continue
+        for d in inc:
+            for p in paths:
+                q = os.path.join(out, d, p)
+                if not os.path.lexists(q):
+                    continue
+                removed += size(q)
+                remove(q)
+        cut.append(group)
+
+say = lambda s: print("  perl: " + s, file=sys.stderr)
+say("модулей, на которые ссылается %s: %d" % (os.path.basename(script), len(needed)))
+if missing:
+    say("нет в сборке (обычно необязательные, не из core): " + ", ".join(sorted(missing)))
+if kept:
+    say("не вырезаю, на них ссылается скрипт: " + ", ".join(kept))
+if cut:
+    say("вырезано %.1f МБ: %s (оставить всё: --perl-full)" % (removed / 1e6, ", ".join(cut)))
+print(" ".join(inc))
+PY
+) || exit 1
+  for d in $inc; do
+    p5="${p5:+$p5:}\$DIR/$d"
+    p5d="${p5d:+$p5d:}\$D/$d"
+  done
+  # parallel и подобные сами запускают «perl -e …» через PATH, а голый bin/perl без
+  # загрузчика на станции не стартует — кладём обёртку-perl в libexec/bin
+  mkdir -p "$OUT/libexec/bin"
+  cat > "$OUT/libexec/bin/perl" <<EOF
+#!/bin/sh
+# perl пакета для дочерних «perl …»: ${NAME}-run добавляет этот каталог в PATH
+D=\$(CDPATH= cd -- "\$(dirname "\$0")/../.." && pwd)
+export PERL5LIB="\${PERL5LIB:-${p5d}}"
+exec "\$D/lib/ld-musl-aarch64.so.1" --library-path "\$D/lib" "\$D/bin/perl" "\$@"
+EOF
+  chmod +x "$OUT/libexec/bin/perl"
+  RUN_ENV="export PERL5LIB=\"${p5}\${PERL5LIB:+:\$PERL5LIB}\"
+export PATH=\"\$DIR/libexec/bin:\$PATH\"
+# временные файлы — в \$TMPDIR или /tmp, а /tmp на Android нет
+if [ -z \"\${TMPDIR:-}\" ] && [ ! -w /tmp ] && [ -w /data/local/tmp ]; then
+  export TMPDIR=/data/local/tmp
+fi
+"
+}
+
+# Главная программа — ELF или скрипт? Обёртка «ld-musl <файл>» годится только для ELF:
+# скрипт загрузчик отвергает («Not a valid dynamic program» — так сломался parallel).
+# Скрипту кладём интерпретатор; непонятный файл или интерпретатор — не собираем.
+LIB_ENV='export LD_LIBRARY_PATH="$DIR/lib:${LD_LIBRARY_PATH:-}"'$'\n'
+RUN_ENV=""
+EXEC_LINE='exec "$DIR/lib/ld-musl-aarch64.so.1" "$BIN" "$@"'
+KIND=$(script_interp "$OUT/bin/$BIN")
+case "$KIND" in
+  ELF) ;;
+  "")
+    echo "ERROR: $OUT/bin/$BIN — не ELF и не скрипт с #!" >&2
+    exit 1
+    ;;
+  *)
+    INTERP=${KIND%%$'\t'*}
+    IARGS=${KIND#*$'\t'}
+    IARGS=${IARGS:+$IARGS }
+    # Библиотеки интерпретатора — через --library-path, а не LD_LIBRARY_PATH: иначе
+    # musl-библиотеки пакета унаследуют системные программы, которые запускает скрипт
+    LIB_ENV=""
+    case "$INTERP" in
+      sh | ash | dash)
+        EXEC_LINE="exec /bin/sh ${IARGS}\"\$BIN\" \"\$@\""
+        ;;
+      bash)
+        copy_bin bash || { echo "ERROR: $BIN — bash-скрипт, а bash нет среди зависимостей (добавь apk bash)" >&2; exit 1; }
+        EXEC_LINE="exec \"\$DIR/lib/ld-musl-aarch64.so.1\" --library-path \"\$DIR/lib\" \"\$DIR/bin/bash\" ${IARGS}\"\$BIN\" \"\$@\""
+        ;;
+      perl | perl5*)
+        bundle_perl
+        EXEC_LINE="exec \"\$DIR/lib/ld-musl-aarch64.so.1\" --library-path \"\$DIR/lib\" \"\$DIR/bin/perl\" ${IARGS}\"\$BIN\" \"\$@\""
+        ;;
+      *)
+        echo "ERROR: $BIN — скрипт на «$INTERP», а сборщик умеет только sh, bash и perl. Добавь поддержку в mk-alpine-pkg.sh или собери пакет вручную" >&2
+        exit 1
+        ;;
+    esac
+    echo "  $BIN — скрипт на $INTERP: интерпретатор в пакете"
+    ;;
+esac
+
 # portable wrapper
 cat > "$OUT/${NAME}-run" <<EOF
 #!/bin/sh
 DIR=\$(CDPATH= cd -- "\$(dirname "\$0")" && pwd)
-export LD_LIBRARY_PATH="\$DIR/lib:\${LD_LIBRARY_PATH:-}"
-if [ -d "\$DIR/share/terminfo" ]; then
+${LIB_ENV}if [ -d "\$DIR/share/terminfo" ]; then
   export TERMINFO="\$DIR/share/terminfo"
 fi
 if [ -d "\$DIR/libexec/git-core" ]; then
   export GIT_EXEC_PATH="\$DIR/libexec/git-core"
 fi
-BIN="\$DIR/bin/${BIN}"
+${RUN_ENV}BIN="\$DIR/bin/${BIN}"
 if [ ! -x "\$BIN" ]; then
   echo "${NAME}: missing \$BIN" >&2
   exit 127
 fi
-exec "\$DIR/lib/ld-musl-aarch64.so.1" "\$BIN" "\$@"
+${EXEC_LINE}
 EOF
 chmod +x "$OUT/${NAME}-run" "$OUT/bin/"* 2>/dev/null || true
 

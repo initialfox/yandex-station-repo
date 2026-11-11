@@ -2,11 +2,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/md5"
 	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -17,6 +19,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -24,7 +27,7 @@ const (
 	defaultIndexURL = "https://raw.githubusercontent.com/initialfox/yandex-station-repo/main/packages.json"
 	// пакеты лежат на ветке pkg (raw), не в Releases
 	defaultBaseURL = "https://raw.githubusercontent.com/initialfox/yandex-station-repo/pkg"
-	version        = "1.0.7"
+	version        = "1.0.8"
 )
 
 // только GitHub raw
@@ -339,7 +342,10 @@ Musl-пакеты: целиком в opt/<имя> + symlink в bindir.
 Обёртки: #!/bin/sh, в PATH — с абсолютным DIR (Android и buildroot).
 Не запускай голый ELF из bin/ — будет «not found».
 
-Переменные: APKG_INDEX APKG_BASE APKG_BINDIR APKG_OPT APKG_CACHE APKG_STATE
+После установки apkg запускает «<команда> --version»: если программа не стартует
+(ошибка загрузчика/интерпретатора), установка откатывается. Отключить: APKG_NOCHECK=1.
+
+Переменные: APKG_INDEX APKG_BASE APKG_BINDIR APKG_OPT APKG_CACHE APKG_STATE APKG_NOCHECK
 `, P.Flavor, P.Bindir, P.Opt, P.State, P.Cache)
 }
 
@@ -539,15 +545,21 @@ func cmdUpgrade(args []string) error {
 		fmt.Println("нечего обновлять")
 		return nil
 	}
+	var failed []string
 	for _, name := range targets {
 		p := findPkg(repo, name)
 		if p == nil {
 			continue
 		}
 		fmt.Printf("→ обновляю %s…\n", name)
+		// один сломанный пакет не останавливает обновление остальных
 		if err := installOne(repo, *p); err != nil {
-			return err
+			fmt.Fprintf(os.Stderr, "✗ %s: %v\n", name, err)
+			failed = append(failed, name)
 		}
+	}
+	if len(failed) > 0 {
+		return fmt.Errorf("не обновлены: %s", strings.Join(failed, ", "))
 	}
 	return nil
 }
@@ -559,13 +571,9 @@ func installOne(repo *repoMeta, p pkgMeta) error {
 	if err := download(url, tmp); err != nil {
 		return fmt.Errorf("скачивание: %w", err)
 	}
-	if p.MD5 != "" {
-		sum, err := fileMD5(tmp)
-		if err != nil {
-			return err
-		}
-		// md5 в индексе может быть от бинарника, не от tar — не фатально
-		_ = sum
+	if err := verifyDownload(tmp, p); err != nil {
+		_ = os.Remove(tmp)
+		return err
 	}
 
 	dest := installDest(p)
@@ -579,99 +587,255 @@ func installOne(repo *repoMeta, p pkgMeta) error {
 		kind = "file"
 	}
 
+	var err error
 	switch kind {
 	case "dir":
-		_ = os.MkdirAll(dest+".new", 0755)
-		if err := untar(tmp, dest+".new"); err != nil {
-			return err
-		}
-		// tar может содержать верхнюю папку name/
-		inner := filepath.Join(dest+".new", p.Name)
-		if st, err := os.Stat(inner); err == nil && st.IsDir() {
-			_ = os.RemoveAll(dest)
-			if err := os.Rename(inner, dest); err != nil {
-				return err
-			}
-			_ = os.RemoveAll(dest + ".new")
-		} else {
-			_ = os.RemoveAll(dest)
-			if err := os.Rename(dest+".new", dest); err != nil {
-				return err
-			}
-		}
-		chmodTree(dest)
-		bin := or(p.Bin, p.Name)
-		wrap := ensureMuslWrapper(dest, bin, p)
-		dst := filepath.Join(bindir(), bin)
-		_ = os.MkdirAll(bindir(), 0755)
-		// НЕ symlink: dirname($0) у /system/xbin/btop и bindir-symlink ломает путь.
-		// В PATH — обёртка с абсолютным DIR=dest (пакет в opt).
-		_ = os.Remove(dst)
-		if err := writeBoundWrapper(wrap, dest, bin, dst); err != nil {
-			return err
-		}
-		tryXbin(dest, bin)
-		if p.Runtime == "musl" || fileExists(filepath.Join(dest, "lib", "ld-musl-aarch64.so.1")) {
-			fmt.Printf("  (musl: запускай «%s», не %s/bin/%s)\n", bin, dest, bin)
-		}
+		err = installDir(p, tmp, dest)
 	default: // file — один статический бинарь
-		_ = os.MkdirAll(bindir(), 0755)
-		bin := or(p.Bin, p.Name)
-		dst := filepath.Join(bindir(), bin)
-		// если tar — распаковать во временную и найти бинарь
-		if strings.HasSuffix(tmp, ".tar") || strings.HasSuffix(tmp, ".tar.gz") {
-			stage := filepath.Join(cacheDir(), p.Name+"-extract")
-			_ = os.RemoveAll(stage)
-			_ = os.MkdirAll(stage, 0755)
-			if err := untar(tmp, stage); err != nil {
-				// может быть не tar, а сырой бинарь с расширением .tar по ошибке
-				if err2 := copyFile(tmp, dst); err2 != nil {
-					return err
-				}
-			} else {
-				// tar = name/name (файл). stage/name часто ДИРЕКТОРИЯ — не брать её как бинарь
-				cand := ""
-				for _, c := range []string{
-					filepath.Join(stage, p.Name, bin),
-					filepath.Join(stage, bin),
-					filepath.Join(stage, p.Name, p.Name),
-				} {
-					if st, err := os.Stat(c); err == nil && !st.IsDir() {
-						cand = c
-						break
-					}
-				}
-				if cand == "" {
-					_ = filepath.Walk(stage, func(path string, info os.FileInfo, err error) error {
-						if err != nil || info.IsDir() {
-							return nil
-						}
-						if info.Name() == bin || (info.Mode()&0111 != 0 && info.Name() == p.Name) {
-							cand = path
-							return io.EOF
-						}
-						return nil
-					})
-				}
-				if cand == "" {
-					return fmt.Errorf("в %s не найден бинарь %s", assetName(p), bin)
-				}
-				if err := copyFile(cand, dst); err != nil {
-					return err
-				}
-			}
-		} else {
-			if err := copyFile(tmp, dst); err != nil {
-				return err
-			}
-		}
-		_ = os.Chmod(dst, 0755)
-		tryXbin(dst, bin)
+		err = installFile(p, tmp)
+	}
+	if err != nil {
+		return err
 	}
 
 	_ = os.WriteFile(filepath.Join(stateDir(), p.Name+".ver"), []byte(p.Version+"\n"), 0644)
 	fmt.Printf("✓ %s → %s\n", p.Name, checkPath(p))
 	return nil
+}
+
+// verifyDownload — md5 скачанного архива против индекса. Качаем с curl -k (на станции
+// нет CA), так что это единственная проверка, что архив не обрезан и не побит.
+func verifyDownload(path string, p pkgMeta) error {
+	if p.MD5 == "" {
+		return nil
+	}
+	sum, err := fileMD5(path)
+	if err != nil {
+		return err
+	}
+	if strings.EqualFold(sum, p.MD5) {
+		return nil
+	}
+	size := int64(-1)
+	if st, err := os.Stat(path); err == nil {
+		size = st.Size()
+	}
+	return fmt.Errorf("%s: md5 %s, а в индексе %s (размер %d, в индексе %d) — архив побит или индекс устарел; повтори «apkg update && apkg install %s» через пару минут",
+		assetName(p), sum, p.MD5, size, p.Size, p.Name)
+}
+
+// installDir — бандл в opt/<имя>. Прежняя версия ждёт в .old, пока новая не пройдёт
+// launchCheck: не запустилась — возвращаем старую (или убираем новую).
+func installDir(p pkgMeta, tmp, dest string) error {
+	stage := dest + ".new"
+	_ = os.MkdirAll(stage, 0755)
+	if err := untar(tmp, stage); err != nil {
+		_ = os.RemoveAll(stage)
+		return err
+	}
+	// tar может содержать верхнюю папку name/
+	src := stage
+	if st, err := os.Stat(filepath.Join(stage, p.Name)); err == nil && st.IsDir() {
+		src = filepath.Join(stage, p.Name)
+	}
+	old := dest + ".old"
+	_ = os.RemoveAll(old)
+	hadOld := false
+	if _, err := os.Lstat(dest); err == nil {
+		if err := os.Rename(dest, old); err != nil {
+			_ = os.RemoveAll(stage)
+			return err
+		}
+		hadOld = true
+	}
+	if err := os.Rename(src, dest); err != nil {
+		_ = os.RemoveAll(stage)
+		if hadOld {
+			_ = os.Rename(old, dest)
+		}
+		return err
+	}
+	_ = os.RemoveAll(stage)
+	chmodTree(dest)
+	bin := or(p.Bin, p.Name)
+	dst := filepath.Join(bindir(), bin)
+	_ = os.MkdirAll(bindir(), 0755)
+	rollback := func() {
+		_ = os.RemoveAll(dest)
+		_ = os.Remove(dst)
+		if hadOld {
+			_ = os.Rename(old, dest)
+			_ = writeBoundWrapper(ensureMuslWrapper(dest, bin, p), dest, bin, dst)
+		}
+	}
+	// НЕ symlink: dirname($0) у /system/xbin/btop и bindir-symlink ломает путь.
+	// В PATH — обёртка с абсолютным DIR=dest (пакет в opt).
+	_ = os.Remove(dst)
+	if err := writeBoundWrapper(ensureMuslWrapper(dest, bin, p), dest, bin, dst); err != nil {
+		rollback()
+		return err
+	}
+	if err := launchCheck(dst); err != nil {
+		rollback()
+		return launchFailed(p, hadOld, err)
+	}
+	_ = os.RemoveAll(old)
+	tryXbin(dest, bin)
+	if p.Runtime == "musl" || fileExists(filepath.Join(dest, "lib", "ld-musl-aarch64.so.1")) {
+		fmt.Printf("  (musl: запускай «%s», не %s/bin/%s)\n", bin, dest, bin)
+	}
+	return nil
+}
+
+// installFile — один бинарь в bindir. Прежний ждёт в .old, пока новый не пройдёт
+// launchCheck. Rename вместо перезаписи ещё и потому, что запущенный бинарь (сам apkg
+// при «apkg upgrade») поверх не записать — «text file busy».
+func installFile(p pkgMeta, tmp string) error {
+	_ = os.MkdirAll(bindir(), 0755)
+	bin := or(p.Bin, p.Name)
+	dst := filepath.Join(bindir(), bin)
+	src := tmp
+	// если tar — распаковать во временную и найти бинарь;
+	// не распаковался — значит, сырой бинарь с расширением .tar по ошибке
+	if strings.HasSuffix(tmp, ".tar") || strings.HasSuffix(tmp, ".tar.gz") {
+		stage := filepath.Join(cacheDir(), p.Name+"-extract")
+		_ = os.RemoveAll(stage)
+		_ = os.MkdirAll(stage, 0755)
+		if err := untar(tmp, stage); err == nil {
+			// tar = name/name (файл). stage/name часто ДИРЕКТОРИЯ — не брать её как бинарь
+			cand := ""
+			for _, c := range []string{
+				filepath.Join(stage, p.Name, bin),
+				filepath.Join(stage, bin),
+				filepath.Join(stage, p.Name, p.Name),
+			} {
+				if st, err := os.Stat(c); err == nil && !st.IsDir() {
+					cand = c
+					break
+				}
+			}
+			if cand == "" {
+				_ = filepath.Walk(stage, func(path string, info os.FileInfo, err error) error {
+					if err != nil || info.IsDir() {
+						return nil
+					}
+					if info.Name() == bin || (info.Mode()&0111 != 0 && info.Name() == p.Name) {
+						cand = path
+						return io.EOF
+					}
+					return nil
+				})
+			}
+			if cand == "" {
+				return fmt.Errorf("в %s не найден бинарь %s", assetName(p), bin)
+			}
+			src = cand
+		}
+	}
+	old := dst + ".old"
+	_ = os.Remove(old)
+	hadOld := os.Rename(dst, old) == nil
+	restore := func() {
+		_ = os.Remove(dst)
+		if hadOld {
+			_ = os.Rename(old, dst)
+		}
+	}
+	if err := copyFile(src, dst); err != nil {
+		restore()
+		return err
+	}
+	_ = os.Chmod(dst, 0755)
+	if err := launchCheck(dst); err != nil {
+		restore()
+		return launchFailed(p, hadOld, err)
+	}
+	_ = os.Remove(old)
+	tryXbin(dst, bin)
+	return nil
+}
+
+// launchCheck — запускается ли установленная команда вообще. Наличие файла (check)
+// этого не гарантирует: parallel 20240422 ставился «успешно», а при запуске падал с
+// «Not a valid dynamic program». Ошибкой считаем только однозначное: сообщение
+// загрузчика или интерпретатора, exit 126/127, падение по сигналу. Код возврата
+// --version и таймаут — нет: не все программы знают этот флаг.
+func launchCheck(cmdPath string) error {
+	if os.Getenv("APKG_NOCHECK") == "1" {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	var out bytes.Buffer
+	cmd := exec.CommandContext(ctx, cmdPath, "--version")
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	cmd.WaitDelay = 2 * time.Second // потомок с нашим stdout не держит проверку вечно
+	err := cmd.Run()
+	if ctx.Err() != nil {
+		return nil // не завершилась за 15 с — значит, запустилась (ждёт ввода, сервер)
+	}
+	return launchProblem(out.String(), err)
+}
+
+// однозначные признаки «программа не стартовала»
+var launchFailMarkers = []string{
+	"Not a valid dynamic program", // musl: загрузчику дали не ELF (скрипт без интерпретатора)
+	"Error loading shared library",
+	"Error relocating",
+	"cannot open shared object file",
+	"CANNOT LINK EXECUTABLE", // bionic
+	"Dynamic Program Loader", // ld-musl запущен без программы
+	"Can't locate ",          // perl: нет модуля
+	"Can't load '",
+	"BEGIN failed--compilation aborted",
+	"ModuleNotFoundError",
+	"Fatal Python error",
+}
+
+func launchProblem(out string, err error) error {
+	for _, m := range launchFailMarkers {
+		if strings.Contains(out, m) {
+			return errors.New(firstLines(out, 4))
+		}
+	}
+	if err == nil {
+		return nil
+	}
+	var ee *exec.ExitError
+	if !errors.As(err, &ee) {
+		return err // не запустилась совсем: нет интерпретатора из #!, exec format error
+	}
+	if ws, ok := ee.Sys().(syscall.WaitStatus); ok && ws.Signaled() {
+		return fmt.Errorf("упала по сигналу: %v\n%s", ws.Signal(), firstLines(out, 4))
+	}
+	switch code := ee.ExitCode(); code {
+	case 126, 127, 132, 133, 134, 135, 136, 139: // не исполняется / не найдена / сигнал через sh
+		return fmt.Errorf("exit %d\n%s", code, firstLines(out, 4))
+	}
+	return nil
+}
+
+func launchFailed(p pkgMeta, restored bool, err error) error {
+	what := "установку отменил"
+	if restored {
+		what = "вернул прежнюю версию"
+	}
+	return fmt.Errorf("%s %s не запускается — %s:\n%v\n  (проверка после установки отключается APKG_NOCHECK=1)", p.Name, p.Version, what, err)
+}
+
+// firstLines — первые n непустых строк с отступом (для сообщений об ошибке)
+func firstLines(s string, n int) string {
+	var keep []string
+	for _, ln := range strings.Split(s, "\n") {
+		if ln = strings.TrimSpace(ln); ln != "" {
+			keep = append(keep, "  "+ln)
+			if len(keep) == n {
+				break
+			}
+		}
+	}
+	return strings.Join(keep, "\n")
 }
 
 func removeOne(p pkgMeta) error {
